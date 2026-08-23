@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Award, Check, ChevronLeft, ChevronRight, Coins, Compass, Crown, Gift, Home, Lock, Palette, RotateCcw, Sparkles, Star } from "lucide-react";
 import { ACHIEVEMENTS } from "@/domain/achievements";
 import { COSMETICS, getCosmeticStatus, requirementLabel } from "@/domain/cosmetics";
@@ -14,13 +14,15 @@ import { AvatarCreator } from "@/components/avatar-creator";
 import { CharacterAvatar } from "@/components/character-avatar";
 import { ProgressBar, SectionHeading } from "@/components/ui";
 import { useHomeQuest } from "@/state/homequest-context";
+import { backupFilename, serializeBackup, type RestorePreview } from "@/domain/backup";
 
 const categoryNames: Record<QuestCategory, string> = { cleaning: "Cleaning", cooking: "Cooking", organization: "Organization", homekeeping: "Homekeeping" };
 const categoryIcons: Record<QuestCategory, string> = { cleaning: "✦", cooking: "♨", organization: "◇", homekeeping: "⌂" };
 
 export function ProfileView() {
-  const { state, activePlayer, reset, updatePreferences, purchaseCosmetic, equipCosmetic } = useHomeQuest();
+  const { state, activePlayer, reset, updatePreferences, purchaseCosmetic, equipCosmetic, updateHouseholdName, inspectBackup, restoreBackup } = useHomeQuest();
   const [tab, setTab] = useState<"progress" | "character" | "journal" | "collection">("progress");
+  const [householdName, setHouseholdName] = useState(state.household.name); const [restorePreview, setRestorePreview] = useState<RestorePreview | null>(null); const [restoreRaw, setRestoreRaw] = useState<string | null>(null); const [backupError, setBackupError] = useState(""); const [resetArmed, setResetArmed] = useState(false); const importRef = useRef<HTMLInputElement>(null);
   const today = toLocalDateKey(new Date()); const [selectedDay, setSelectedDay] = useState(today); const [selectedWeek, setSelectedWeek] = useState(getWeekStart(today));
   const playerProgress = getLevelProgress(activePlayer.progression.totalXp); const home = getHomeLevelProgress(state.household.homeProgression);
   const daily = getDailySummary(state, selectedDay); const weekly = getWeeklySummary(state, selectedWeek); const tomorrow = getTomorrowPreview(state, today);
@@ -55,7 +57,7 @@ export function ProfileView() {
       <section className="tomorrow-card panel"><div><p className="eyebrow">Tomorrow</p><h2>{tomorrow.quests.length ? `${tomorrow.quests.length} quests scheduled` : "A gentle open day"}</h2><p>{tomorrow.quests.length ? `Estimated core time: ${formatEstimatedTime(tomorrow.estimatedMinutes)}` : "Nothing added just to fill a list."}</p></div><Compass size={24} /></section>
     </>}
 
-    <section className="settings panel"><div><div><h3>Gentler motion</h3><p>Reduce decorative movement and celebration effects for everyone on this device.</p></div><button className={`toggle ${state.session.preferences.reducedMotion ? "on" : ""}`} role="switch" aria-checked={state.session.preferences.reducedMotion} onClick={() => updatePreferences({ reducedMotion: !state.session.preferences.reducedMotion })}><span /></button></div>{process.env.NODE_ENV !== "production" && <button className="reset-button" onClick={() => { if (window.confirm("Reset HomeQuest to its starting state?")) reset(); }}><RotateCcw size={15} /> Reset local save <small>Development only</small></button>}</section>
+    <section className="settings panel data-settings"><p className="eyebrow">Household & data</p><h2>Keep HomeQuest yours</h2><label className="onboarding-field"><span>Household name</span><input aria-label="Household name" value={householdName} onChange={(event) => setHouseholdName(event.target.value)} onBlur={() => updateHouseholdName(householdName)} /></label><p className="form-note">Members · {state.household.playerIds.map((id) => state.players[id].name).join(", ")}. Switch adventurers from the sidebar to customize each character.</p><div className="data-tools"><h3>Data & Backup</h3><p>Backups include this HomeQuest household only—never unrelated browser data.</p><button type="button" className="soft-button" onClick={() => { const blob = new Blob([serializeBackup(state)], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = backupFilename(); link.click(); URL.revokeObjectURL(url); }}>Export HomeQuest Backup</button><input ref={importRef} className="sr-only" aria-label="Import HomeQuest backup" type="file" accept="application/json,.json" onChange={async (event) => { const input = event.currentTarget; const file = input.files?.[0]; if (!file) return; const raw = await file.text(); const parsed = inspectBackup(raw); if (parsed.ok) { setRestoreRaw(raw); setRestorePreview(parsed.preview); setBackupError(""); } else setBackupError(parsed.error); input.value = ""; }} /><button type="button" className="soft-button" onClick={() => importRef.current?.click()}>Import Backup</button>{backupError && <p className="form-error" role="alert">{backupError}</p>}{restorePreview && <div className="restore-preview"><strong>Restore this backup?</strong><p>{restorePreview.householdName} · {restorePreview.playerNames.join(", ")}</p><p>{restorePreview.templateCount} quest templates · {restorePreview.inventoryCount} inventory items · {restorePreview.homeXp} Home XP</p><button type="button" className="primary-button" onClick={() => { if (restoreRaw) restoreBackup(restoreRaw); setRestorePreview(null); setRestoreRaw(null); }}>Replace current save</button><button type="button" className="soft-button" onClick={() => setRestorePreview(null)}>Cancel</button></div>}</div><div className="reset-zone"><h3>Reset HomeQuest</h3><p>This removes the local household, characters, progression, quests, inventory, and history from this device. Export first if you want to keep it.</p>{resetArmed ? <><button className="reset-button" onClick={() => { reset(); setResetArmed(false); }}><RotateCcw size={15} /> Confirm full reset</button><button className="soft-button" onClick={() => setResetArmed(false)}>Cancel</button></> : <button className="soft-button" onClick={() => setResetArmed(true)}>Reset HomeQuest…</button>}</div><div><div><h3>Gentler motion</h3><p>Reduce decorative movement and celebration effects for everyone on this device.</p></div><button className={`toggle ${state.session.preferences.reducedMotion ? "on" : ""}`} role="switch" aria-checked={state.session.preferences.reducedMotion} onClick={() => updatePreferences({ reducedMotion: !state.session.preferences.reducedMotion })}><span /></button></div></section>
   </div>;
 }
 

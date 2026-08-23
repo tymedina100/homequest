@@ -73,12 +73,47 @@ export function migrateV4ToV5(legacy: LegacyV4State, now: Date): AppState {
   return { schemaVersion: 5, household: { id: HOUSEHOLD_ID, name: "Tyler & Rachel's Home", playerIds: [TYLER_PLAYER_ID, RACHEL_PLAYER_ID], quests, questTemplates: legacy.questTemplates, homeStats: legacy.homeStats, inventory: legacy.inventory, homeProgression: legacy.homeProgression, cosmetics: householdCosmetics, lifecycle }, players: { [TYLER_PLAYER_ID]: tyler, [RACHEL_PLAYER_ID]: freshRachel(today, now) }, session: { activePlayerId: TYLER_PLAYER_ID, preferences: { reducedMotion: legacy.preferences?.reducedMotion ?? false } } };
 }
 
-function normalizeV5(value: AppState, now: Date): AppState {
-  const today = toLocalDateKey(now); const players = Object.fromEntries(Object.entries(value.players).map(([id, player]) => [id, { ...player, avatar: normalizeAvatar(player.avatar, id) }])) as AppState["players"];
-  if (!players[RACHEL_PLAYER_ID]) players[RACHEL_PLAYER_ID] = freshRachel(today, now);
-  const playerIds = [...new Set([...value.household.playerIds, ...Object.keys(players)])];
+function normalizeV5(value: AppState): AppState {
+  const players = Object.fromEntries(Object.entries(value.players).map(([id, player]) => [id, { ...player, avatar: normalizeAvatar(player.avatar, id) }])) as AppState["players"];
+  const playerIds = [...new Set(value.household.playerIds.filter((id) => Boolean(players[id])))];
   const activePlayerId = players[value.session.activePlayerId] ? value.session.activePlayerId : playerIds[0];
   return { ...value, household: { ...value.household, playerIds }, players, session: { ...value.session, activePlayerId, preferences: { reducedMotion: value.session.preferences?.reducedMotion ?? false } } };
+}
+
+function nonNegative(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value) && value >= 0; }
+
+/** Runtime invariant check used by both startup migration and backup restore. */
+export function validateAppState(value: unknown): value is AppState {
+  if (!value || typeof value !== "object") return false;
+  const state = value as AppState;
+  if (state.schemaVersion !== 5 || !state.household || !state.players || !state.session) return false;
+  if (!state.household.id || !state.household.name?.trim() || !Array.isArray(state.household.playerIds) || !state.household.playerIds.length) return false;
+  if (new Set(state.household.playerIds).size !== state.household.playerIds.length || !state.players[state.session.activePlayerId]) return false;
+  if (!state.household.playerIds.every((id) => state.players[id]?.id === id)) return false;
+  if (!Array.isArray(state.household.quests) || !Array.isArray(state.household.questTemplates) || !Array.isArray(state.household.inventory)) return false;
+  if (!nonNegative(state.household.homeProgression?.totalXp)) return false;
+  const playerIds = new Set(state.household.playerIds);
+  for (const player of Object.values(state.players)) {
+    if (!player.name?.trim() || !nonNegative(player.coins) || !nonNegative(player.progression?.totalXp) || !nonNegative(player.progression?.completedQuestCount)) return false;
+  }
+  if (state.household.quests.some((quest) => quest.completedByPlayerId && !playerIds.has(quest.completedByPlayerId))) return false;
+  if (state.household.lifecycle.questHistory.some((entry) => entry.playerId && !playerIds.has(entry.playerId))) return false;
+  const templateIds = new Set(state.household.questTemplates.map((template) => template.id));
+  return state.household.quests.every((quest) => !quest.templateId || templateIds.has(quest.templateId) || quest.kind === "rescue" || quest.kind === "comeback");
+}
+
+/** Canonical persisted-state migration chain, shared by startup and backup restore. */
+export function migratePersistedState(value: unknown, now = new Date()): AppState | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  let migrated: AppState | null;
+  if (raw.schemaVersion === 5) migrated = normalizeV5(raw as unknown as AppState);
+  else if (raw.schemaVersion === 4) migrated = migrateV4ToV5(raw as unknown as LegacyV4State, now);
+  else {
+    const v4 = raw.schemaVersion === 3 ? migrateV3(raw, now) : (() => { const v1Quests = normalizedV1Quests(raw); const v3 = v1Quests ? migrateV2({ ...raw, schemaVersion: 2, quests: v1Quests, lifecycle: { dailyHistory: [], questHistory: [] } }, now) : migrateV2(raw, now); return v3 ? migrateV3(v3, now) : null; })();
+    migrated = v4 ? migrateV4ToV5(v4, now) : null;
+  }
+  return migrated && validateAppState(migrated) ? migrated : null;
 }
 
 export class LocalStoragePersistence implements HomeQuestPersistence {
@@ -86,11 +121,7 @@ export class LocalStoragePersistence implements HomeQuestPersistence {
   async load(): Promise<AppState | null> {
     const raw = this.storage.getItem(STORAGE_KEY); if (!raw) return null;
     try {
-      const value = JSON.parse(raw) as Record<string, unknown>; const now = new Date();
-      if (value.schemaVersion === 5) return normalizeV5(value as unknown as AppState, now);
-      if (value.schemaVersion === 4) return migrateV4ToV5(value as unknown as LegacyV4State, now);
-      const v4 = value.schemaVersion === 3 ? migrateV3(value, now) : (() => { const v1Quests = normalizedV1Quests(value); const v3 = v1Quests ? migrateV2({ ...value, schemaVersion: 2, quests: v1Quests, lifecycle: { dailyHistory: [], questHistory: [] } }, now) : migrateV2(value, now); return v3 ? migrateV3(v3, now) : null; })();
-      return v4 ? migrateV4ToV5(v4, now) : null;
+      return migratePersistedState(JSON.parse(raw), new Date());
     } catch { return null; }
   }
   async save(state: AppState): Promise<void> { this.storage.setItem(STORAGE_KEY, JSON.stringify(state)); }

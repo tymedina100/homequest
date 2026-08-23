@@ -10,6 +10,7 @@ import { InventoryView } from "@/views/inventory-view";
 import { MealsView } from "@/views/meals-view";
 import { ProfileView } from "@/views/profile-view";
 import { QuestsView } from "@/views/quests-view";
+import { OnboardingView } from "@/views/onboarding-view";
 
 type ViewId = "home" | "quests" | "inventory" | "meals" | "profile";
 const navItems = [
@@ -23,7 +24,8 @@ const navItems = [
 function AppContent() {
   const [view, setView] = useState<ViewId>("home");
   const [menuOpen, setMenuOpen] = useState(false);
-  const { hydrated, state } = useHomeQuest();
+  const { hydrated, needsOnboarding, state } = useHomeQuest();
+  if (hydrated && needsOnboarding) return <OnboardingView />;
   const go = (next: ViewId) => { setView(next); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   return (
     <div className="app-shell" data-theme={state.household.cosmetics.equippedThemeId} data-accent={state.household.cosmetics.equippedAccentId ?? "default"} data-reduced-motion={state.session.preferences.reducedMotion}>
