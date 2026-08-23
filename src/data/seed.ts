@@ -3,7 +3,7 @@ import { toLocalDateKey } from "@/domain/dates";
 import { createDefaultHouseholdCollection } from "@/domain/cosmetics";
 import { defaultAvatarFor } from "@/domain/avatar";
 import { HOUSEHOLD_ID, RACHEL_PLAYER_ID, TYLER_PLAYER_ID } from "@/domain/players";
-import { createKitchenZone } from "@/domain/zones";
+import { createBathroomZone, createKitchenZone } from "@/domain/zones";
 
 const createdAt = "2026-08-22T08:00:00.000Z";
 
@@ -13,6 +13,8 @@ export const seedQuests: Quest[] = [
   { id: "counters", templateId: "counters", title: "Wipe kitchen counters", description: "Clear crumbs and give the counters a quick wipe.", category: "cleaning", status: "available", xpReward: 20, estimatedMinutes: 7, effort: "low", urgency: "gentle", recurrence: { cadence: "as-needed" }, escalation: "gentle", statEffects: { cleanliness: 9, kitchen: 5 }, zoneId: "kitchen", zoneEffects: { counters: 18 }, createdAt, recommendation: { momentum: 6 }, comebackEligible: true },
   { id: "trash", templateId: "trash", title: "Take out the trash", description: "Tie the bag, take it out, and add a fresh liner.", category: "homekeeping", status: "available", xpReward: 25, estimatedMinutes: 6, effort: "low", urgency: "today", recurrence: { cadence: "weekdays", daysOfWeek: [2, 5] }, escalation: "rescue-eligible", statEffects: { cleanliness: 7, organization: 3 }, zoneId: "kitchen", zoneEffects: { trash: 22 }, createdAt, recommendation: { momentum: 7 }, comebackEligible: true },
   { id: "laundry", templateId: "laundry", title: "Put away one laundry basket", description: "Just one basket—future you gets the clear chair.", category: "organization", status: "available", xpReward: 40, estimatedMinutes: 15, effort: "medium", urgency: "soon", recurrence: { cadence: "weekly", daysOfWeek: [6] }, escalation: "rescue-eligible", statEffects: { organization: 12, cleanliness: 3 }, zoneId: "household", createdAt, recommendation: { momentum: 3 }, comebackEligible: true },
+  { id: "bathroom-reset", templateId: "bathroom-reset", title: "Reset the bathroom", description: "A kind fifteen-minute refresh of the sink, toilet, shower, and floor.", category: "cleaning", status: "available", xpReward: 38, estimatedMinutes: 15, effort: "medium", urgency: "soon", recurrence: { cadence: "weekly", daysOfWeek: [0] }, escalation: "rescue-eligible", statEffects: { cleanliness: 8, organization: 2 }, zoneId: "bathroom", zoneEffects: { sink: 14, toilet: 16, shower: 12, floor: 10 }, createdAt, recommendation: { momentum: 7 }, comebackEligible: true },
+  { id: "bathroom-supplies", templateId: "bathroom-supplies", title: "Restock bathroom supplies", description: "Check the essentials and replace one thing that is low.", category: "homekeeping", status: "available", xpReward: 22, estimatedMinutes: 6, effort: "low", urgency: "soon", recurrence: { cadence: "weekdays", daysOfWeek: [3] }, escalation: "gentle", statEffects: { supplies: 7, organization: 2 }, zoneId: "bathroom", zoneEffects: { supplies: 22 }, createdAt, recommendation: { momentum: 5 } },
 ];
 
 /** Milestone 0.3 keeps the existing starter chores as real reusable templates. */
@@ -73,7 +75,7 @@ function createRachel(today: ReturnType<typeof toLocalDateKey>): PlayerState {
 export function createSeedState(now = new Date()): AppState {
   const today = toLocalDateKey(now);
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     household: {
       id: HOUSEHOLD_ID, name: "Tyler & Rachel's Home", playerIds: [TYLER_PLAYER_ID, RACHEL_PLAYER_ID],
       quests: seedQuests.map((quest) => ({ ...quest, occurrenceDate: today })),
@@ -91,9 +93,11 @@ export function createSeedState(now = new Date()): AppState {
       { id: "rice", name: "Jasmine rice", category: "grains", quantity: 2, unit: "lb", storageLocation: "pantry", ingredientTags: ["rice"] },
       { id: "tortilla", name: "Flour tortillas", category: "bread", quantity: 6, unit: "tortillas", storageLocation: "pantry", ingredientTags: ["tortillas"] },
       { id: "soy", name: "Soy sauce", category: "condiment", quantity: 1, unit: "bottle", storageLocation: "pantry", ingredientTags: ["soy sauce"] },
+      { id: "toilet-paper", name: "Toilet paper", category: "bathroom supplies", quantity: 5, unit: "rolls", storageLocation: "pantry", lowStockThreshold: 4, ingredientTags: [] },
+      { id: "bathroom-cleaner", name: "Bathroom cleaner", category: "cleaning supplies", quantity: 1, unit: "bottle", storageLocation: "pantry", lowStockThreshold: 1, ingredientTags: [] },
       ],
       homeProgression: { totalXp: 275 },
-      zones: { kitchen: createKitchenZone({ cleanliness: 62, organization: 48, supplies: 76, kitchen: 55 }, 118) },
+      zones: { kitchen: createKitchenZone({ cleanliness: 62, organization: 48, supplies: 76, kitchen: 55 }, 118), bathroom: createBathroomZone({ cleanliness: 62, organization: 48, supplies: 76, kitchen: 55 }, 34) },
       cosmetics: createDefaultHouseholdCollection(),
       lifecycle: { lastLifecycleDate: today, lastOpenedDate: today, lastMeaningfulActivityDate: today, dailyHistory: [], questHistory: [] },
     },

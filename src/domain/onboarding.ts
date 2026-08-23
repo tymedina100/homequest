@@ -2,7 +2,7 @@ import { createSeedState, seedQuestTemplates } from "@/data/seed";
 import { defaultAvatarFor, normalizeAvatar } from "./avatar";
 import { toLocalDateKey } from "./dates";
 import { createQuestOccurrence } from "./templates";
-import { createKitchenZone } from "./zones";
+import { createBathroomZone, createKitchenZone } from "./zones";
 import type { AppState, AvatarConfig, PlayerState, Progression, QuestTemplate, SkillProgression } from "./types";
 
 export type HomePriority = "kitchen" | "laundry" | "cleaning" | "cooking" | "food-waste" | "organization" | "supplies" | "upkeep";
@@ -65,8 +65,8 @@ export function createOnboardedState(draft: OnboardingDraft, now = new Date()): 
   const players = Object.fromEntries(uniquePlayers.map((player) => [player.id, createPlayer(player, today, now.toISOString())])) as AppState["players"];
   const name = draft.householdName.trim() || "Our Home";
   return {
-    schemaVersion: 6,
-    household: { ...base.household, id: `household-${slug(name, "home")}`, name, playerIds: uniquePlayers.map((player) => player.id), quests: templates.filter((template) => template.recurrence.cadence === "manual" || template.recurrence.cadence === "as-needed" || template.recurrence.cadence === "daily").map((template) => createQuestOccurrence(template, today)), questTemplates: templates, inventory: [], homeProgression: { totalXp: 0 }, homeStats: { cleanliness: 50, organization: 50, supplies: 50, kitchen: 50 }, zones: { kitchen: createKitchenZone({ cleanliness: 50, organization: 50, supplies: 50, kitchen: 50 }) }, lifecycle: { lastLifecycleDate: today, lastOpenedDate: today, lastMeaningfulActivityDate: today, dailyHistory: [], questHistory: [] } },
+    schemaVersion: 7,
+    household: { ...base.household, id: `household-${slug(name, "home")}`, name, playerIds: uniquePlayers.map((player) => player.id), quests: templates.filter((template) => template.recurrence.cadence === "manual" || template.recurrence.cadence === "as-needed" || template.recurrence.cadence === "daily").map((template) => createQuestOccurrence(template, today)), questTemplates: templates, inventory: [], homeProgression: { totalXp: 0 }, homeStats: { cleanliness: 50, organization: 50, supplies: 50, kitchen: 50 }, zones: { kitchen: createKitchenZone({ cleanliness: 50, organization: 50, supplies: 50, kitchen: 50 }), bathroom: createBathroomZone({ cleanliness: 50, organization: 50, supplies: 50, kitchen: 50 }) }, lifecycle: { lastLifecycleDate: today, lastOpenedDate: today, lastMeaningfulActivityDate: today, dailyHistory: [], questHistory: [] } },
     players,
     session: { activePlayerId: uniquePlayers[0].id, preferences: { reducedMotion: false } },
   };

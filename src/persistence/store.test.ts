@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createSeedState } from "@/data/seed";
 import { RACHEL_PLAYER_ID, TYLER_PLAYER_ID } from "@/domain/players";
-import { schemaV5Fixture } from "./fixtures";
+import { schemaV5Fixture, schemaV6Fixture } from "./fixtures";
 import { LocalStoragePersistence, migratePersistedState, STORAGE_KEY } from "./store";
 
 function legacyV4() {
@@ -39,7 +39,7 @@ describe("local persistence", () => {
   it("migrates a Milestone 0.1 save without losing progression", async () => {
     const persistence = new LocalStoragePersistence(localStorage); const legacy = legacyV4();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...legacy, schemaVersion: 1, lifecycle: undefined })); const migrated = await persistence.load();
-    expect(migrated).toMatchObject({ schemaVersion: 6, players: { [TYLER_PLAYER_ID]: { progression: { totalXp: legacy.progression.totalXp } } }, household: { homeProgression: { totalXp: legacy.progression.totalXp }, zones: { kitchen: { id: "kitchen" } } } });
+    expect(migrated).toMatchObject({ schemaVersion: 7, players: { [TYLER_PLAYER_ID]: { progression: { totalXp: legacy.progression.totalXp } } }, household: { homeProgression: { totalXp: legacy.progression.totalXp }, zones: { kitchen: { id: "kitchen" }, bathroom: { id: "bathroom" } } } });
     expect(migrated?.household.lifecycle.dailyHistory).toEqual([]);
     expect(migrated?.household.quests[0]).toMatchObject({ templateId: "dishwasher", missedCount: 0 });
     expect(migrated?.household.questTemplates[0]).toMatchObject({ id: "dishwasher", active: true });
@@ -48,7 +48,7 @@ describe("local persistence", () => {
   it("migrates a Milestone 0.2 save into templates and a player daily context", async () => {
     const persistence = new LocalStoragePersistence(localStorage); const legacy = legacyV4();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...legacy, schemaVersion: 2, questTemplates: undefined, dailyContext: undefined })); const migrated = await persistence.load();
-    expect(migrated?.schemaVersion).toBe(6);
+    expect(migrated?.schemaVersion).toBe(7);
     expect(migrated?.household.questTemplates.map((template) => template.id)).toContain("dishwasher");
     expect(migrated?.players[TYLER_PLAYER_ID].dailyContext.availableMinutes).toBe(15);
   });
@@ -68,7 +68,7 @@ describe("local persistence", () => {
     const persistence = new LocalStoragePersistence(localStorage); const legacy = legacyV4() as Record<string, unknown>;
     delete legacy.homeProgression; delete legacy.skills; delete legacy.cosmetics; delete legacy.dailyChest; legacy.schemaVersion = 3;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy)); const migrated = await persistence.load();
-    expect(migrated?.schemaVersion).toBe(6);
+    expect(migrated?.schemaVersion).toBe(7);
     expect(migrated?.players[TYLER_PLAYER_ID].skills.cleaning.totalXp).toBe(migrated?.players[TYLER_PLAYER_ID].progression.categoryStats.cleaning.xp);
     expect(migrated?.household.cosmetics.equippedThemeId).toBe("night-hearth");
   });
@@ -84,12 +84,18 @@ describe("local persistence", () => {
     expect(migrated?.household.lifecycle.questHistory[0].playerId).toBe(TYLER_PLAYER_ID);
   });
 
-  it("migrates schema v5 deterministically into a valid shared Kitchen and is idempotent", () => {
+  it("migrates schema v5 through Kitchen into stable Kitchen and Bathroom zones", () => {
     const legacy = schemaV5Fixture();
     const migrated = migratePersistedState(legacy, new Date(2026, 7, 23, 10));
-    expect(migrated).toMatchObject({ schemaVersion: 6, household: { zones: { kitchen: { totalXp: 110, metadata: { initializedFromSchema: 5 }, condition: { dishes: 57, counters: 56, floor: 58, trash: 56, food: 70 } } } } });
+    expect(migrated).toMatchObject({ schemaVersion: 7, household: { zones: { kitchen: { totalXp: 110, metadata: { initializedFromSchema: 5 }, condition: { dishes: 57, counters: 56, floor: 58, trash: 56, food: 70 } }, bathroom: { totalXp: 0, metadata: { initializedFromSchema: 6 }, condition: { sink: 58, toilet: 59, shower: 58, floor: 58, supplies: 68 } } } } });
     expect(migrated?.household.quests.find((quest) => quest.id === "dishwasher")).toMatchObject({ zoneId: "kitchen", zoneEffects: { dishes: 20 } });
     expect(migrated?.household.quests.find((quest) => quest.id === "laundry")?.zoneId).toBe("household");
     expect(migratePersistedState(migrated, new Date(2026, 7, 23, 10))).toEqual(migrated);
+  });
+
+  it("migrates an existing v6 Kitchen without changing its progression or decor", () => {
+    const legacy = schemaV6Fixture(); legacy.household.zones.kitchen.totalXp = 222; legacy.household.zones.kitchen.cosmetics.equippedDecorationIds = { plant: "kitchen-herb-garden" };
+    const migrated = migratePersistedState(legacy, new Date(2026, 7, 23, 10));
+    expect(migrated?.household.zones).toMatchObject({ kitchen: { totalXp: 222, cosmetics: { equippedDecorationIds: { plant: "kitchen-herb-garden" } } }, bathroom: { id: "bathroom", totalXp: 0 } });
   });
 });

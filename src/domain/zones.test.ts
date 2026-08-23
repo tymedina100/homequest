@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSeedState } from "@/data/seed";
-import { applyKitchenEffects, calculateKitchenHarmony, getZoneLevelProgress, normalizeKitchenCondition, seedKitchenCondition, zoneXpAtLevel } from "./zones";
+import { applyBathroomEffects, applyKitchenEffects, calculateBathroomHarmony, calculateKitchenHarmony, getBathroomLevelProgress, getZoneLevelProgress, normalizeBathroomCondition, normalizeKitchenCondition, seedBathroomCondition, seedKitchenCondition, zoneXpAtLevel } from "./zones";
 
 describe("Kitchen zone model", () => {
   it("initializes a bounded shared Kitchen and calculates Harmony deterministically", () => {
@@ -21,5 +21,12 @@ describe("Kitchen zone model", () => {
     const level = getZoneLevelProgress(900).level;
     applyKitchenEffects(normalizeKitchenCondition({ dishes: 80 }), { dishes: -100 });
     expect(getZoneLevelProgress(900).level).toBe(level);
+  });
+  it("keeps Bathroom conditions bounded and progression independent from harmony", () => {
+    expect(seedBathroomCondition({ kitchen: 55, cleanliness: 62, organization: 48, supplies: 76 })).toEqual({ sink: 58, toilet: 59, shower: 58, floor: 58, supplies: 68 });
+    expect(normalizeBathroomCondition({ sink: -10, toilet: 120 })).toMatchObject({ sink: 0, toilet: 100 });
+    const xpLevel = getBathroomLevelProgress(900).level;
+    expect(calculateBathroomHarmony(applyBathroomEffects(normalizeBathroomCondition({ sink: 80 }), { sink: -100 }))).toBeLessThan(100);
+    expect(getBathroomLevelProgress(900).level).toBe(xpLevel);
   });
 });

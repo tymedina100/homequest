@@ -51,6 +51,23 @@ test("Home opens the persistent Kitchen Zone with condition and progression", as
   await expect(page.getByText(/Permanent Kitchen progress/)).toBeVisible();
 });
 
+test("Home opens the persistent Bathroom Zone with its own condition and progression", async ({ page }) => {
+  await withSave(page, createSeedState(new Date(2026, 7, 23, 10))); await page.goto("/");
+  await page.getByRole("button", { name: /Enter the Bathroom/ }).click();
+  await expect(page.getByRole("heading", { name: "Bathroom", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Bathroom Harmony/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Bathroom condition" })).toContainText("Toilet");
+});
+
+test("Bathroom completion is shared and persists without rewarding the inactive player", async ({ page }) => {
+  const state = createSeedState(new Date(2026, 7, 23, 10)); await withSave(page, state); await page.goto("/"); await page.getByRole("button", { name: /Enter the Bathroom/ }).click();
+  await page.getByRole("button", { name: "Complete Reset the bathroom" }).click();
+  await expect.poll(async () => (await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).household.zones.bathroom.totalXp, STORAGE_KEY))).toBeGreaterThan(state.household.zones.bathroom.totalXp);
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), STORAGE_KEY);
+  expect(saved.household.zones.bathroom.condition.toilet).toBeGreaterThan(state.household.zones.bathroom.condition.toilet);
+  expect(saved.players["player-rachel"].progression.totalXp).toBe(state.players["player-rachel"].progression.totalXp);
+});
+
 test("Tyler completion improves the shared Kitchen once and persists without rewarding Rachel", async ({ page }) => {
   const state = createSeedState(new Date(2026, 7, 23, 10)); await withSave(page, state); await page.goto("/");
   await page.getByRole("button", { name: /Enter the Kitchen/ }).click();

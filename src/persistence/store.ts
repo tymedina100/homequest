@@ -4,8 +4,8 @@ import { toLocalDateKey } from "@/domain/dates";
 import { HOUSEHOLD_ID, RACHEL_PLAYER_ID, TYLER_PLAYER_ID } from "@/domain/players";
 import { getSkillLevelProgress, perksForLevel } from "@/domain/skills";
 import { withZoneMetadata } from "@/domain/zone-mapping";
-import { createKitchenZone, normalizeKitchenCondition } from "@/domain/zones";
-import type { AchievementState, AppState, CosmeticCollection, DailyChestState, DailyContext, DailyLifecycleState, HomeProgression, HomeStats, HouseholdState, InventoryItem, PlayerState, Progression, Quest, QuestCategory, QuestTemplate, SkillProgression, UserPreferences } from "@/domain/types";
+import { createBathroomZone, createKitchenZone, normalizeBathroomCondition, normalizeKitchenCondition } from "@/domain/zones";
+import type { AchievementState, AppState, CosmeticCollection, DailyChestState, DailyContext, DailyLifecycleState, HomeProgression, HomeStats, HouseholdState, InventoryItem, KitchenZoneState, PlayerState, Progression, Quest, QuestCategory, QuestTemplate, SkillProgression, UserPreferences } from "@/domain/types";
 
 export interface HomeQuestPersistence { load(): Promise<AppState | null>; save(state: AppState): Promise<void>; clear(): Promise<void> }
 export const STORAGE_KEY = "homequest.save.v1";
@@ -23,6 +23,13 @@ interface LegacyV4State {
 interface LegacyV5State {
   schemaVersion: 5;
   household: Omit<HouseholdState, "zones">;
+  players: AppState["players"];
+  session: AppState["session"];
+}
+
+interface LegacyV6State {
+  schemaVersion: 6;
+  household: Omit<HouseholdState, "zones"> & { zones: { kitchen: KitchenZoneState } };
   players: AppState["players"];
   session: AppState["session"];
 }
@@ -83,7 +90,7 @@ export function migrateV4ToV5(legacy: LegacyV4State, now: Date): LegacyV5State {
 }
 
 /** Adds structured room metadata and conservatively credits prior Home work to the first zone. */
-export function migrateV5ToV6(value: LegacyV5State): AppState {
+export function migrateV5ToV6(value: LegacyV5State): LegacyV6State {
   const quests = value.household.quests.map((quest) => {
     const mapped = withZoneMetadata({ ...quest, id: quest.templateId ?? quest.id });
     return { ...mapped, id: quest.id };
@@ -102,13 +109,30 @@ export function migrateV5ToV6(value: LegacyV5State): AppState {
   };
 }
 
-function normalizeV6(value: AppState): AppState | null {
+/** Adds the second persistent room without retroactively inventing bathroom history. */
+export function migrateV6ToV7(value: LegacyV6State): AppState {
+  const kitchen = value.household.zones.kitchen;
+  return {
+    ...value,
+    schemaVersion: 7,
+    household: {
+      ...value.household,
+      zones: {
+        kitchen: { ...kitchen, condition: normalizeKitchenCondition(kitchen.condition ?? {}), cosmetics: { equippedDecorationIds: kitchen.cosmetics?.equippedDecorationIds ?? {} } },
+        bathroom: createBathroomZone(value.household.homeStats, 0, 6),
+      },
+    },
+  };
+}
+
+function normalizeV7(value: AppState): AppState | null {
   if (!value.household?.zones?.kitchen || !value.players || !value.session) return null;
   const players = Object.fromEntries(Object.entries(value.players).map(([id, player]) => [id, { ...player, avatar: normalizeAvatar(player.avatar, id) }])) as AppState["players"];
   const playerIds = [...new Set(value.household.playerIds.filter((id) => Boolean(players[id])))];
   const activePlayerId = players[value.session.activePlayerId] ? value.session.activePlayerId : playerIds[0];
   const kitchen = value.household.zones.kitchen;
-  return { ...value, household: { ...value.household, playerIds, zones: { ...value.household.zones, kitchen: { ...kitchen, totalXp: Math.max(0, Math.floor(kitchen.totalXp)), condition: normalizeKitchenCondition(kitchen.condition ?? {}), cosmetics: { equippedDecorationIds: kitchen.cosmetics?.equippedDecorationIds ?? {} } } } }, players, session: { ...value.session, activePlayerId, preferences: { reducedMotion: value.session.preferences?.reducedMotion ?? false } } };
+  const bathroom = value.household.zones.bathroom;
+  return { ...value, household: { ...value.household, playerIds, zones: { kitchen: { ...kitchen, totalXp: Math.max(0, Math.floor(kitchen.totalXp)), condition: normalizeKitchenCondition(kitchen.condition ?? {}), cosmetics: { equippedDecorationIds: kitchen.cosmetics?.equippedDecorationIds ?? {} } }, bathroom: { ...bathroom, totalXp: Math.max(0, Math.floor(bathroom.totalXp)), condition: normalizeBathroomCondition(bathroom.condition ?? {}), cosmetics: { equippedDecorationIds: bathroom.cosmetics?.equippedDecorationIds ?? {} } } } }, players, session: { ...value.session, activePlayerId, preferences: { reducedMotion: value.session.preferences?.reducedMotion ?? false } } };
 }
 
 function nonNegative(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value) && value >= 0; }
@@ -117,7 +141,7 @@ function nonNegative(value: unknown): value is number { return typeof value === 
 export function validateAppState(value: unknown): value is AppState {
   if (!value || typeof value !== "object") return false;
   const state = value as AppState;
-  if (state.schemaVersion !== 6 || !state.household || !state.players || !state.session) return false;
+  if (state.schemaVersion !== 7 || !state.household || !state.players || !state.session) return false;
   if (!state.household.id || !state.household.name?.trim() || !Array.isArray(state.household.playerIds) || !state.household.playerIds.length) return false;
   if (new Set(state.household.playerIds).size !== state.household.playerIds.length || !state.players[state.session.activePlayerId]) return false;
   if (!state.household.playerIds.every((id) => state.players[id]?.id === id)) return false;
@@ -127,13 +151,16 @@ export function validateAppState(value: unknown): value is AppState {
   const kitchen = state.household.zones?.kitchen;
   if (!kitchen || kitchen.id !== "kitchen" || kitchen.type !== "kitchen" || !nonNegative(kitchen.totalXp)) return false;
   if (!kitchen.condition || Object.values(kitchen.condition).some((value) => !nonNegative(value) || value > 100)) return false;
+  const bathroom = state.household.zones?.bathroom;
+  if (!bathroom || bathroom.id !== "bathroom" || bathroom.type !== "bathroom" || !nonNegative(bathroom.totalXp)) return false;
+  if (!bathroom.condition || Object.values(bathroom.condition).some((value) => !nonNegative(value) || value > 100)) return false;
   const playerIds = new Set(state.household.playerIds);
   for (const player of Object.values(state.players)) {
     if (!player.name?.trim() || !nonNegative(player.coins) || !nonNegative(player.progression?.totalXp) || !nonNegative(player.progression?.completedQuestCount)) return false;
   }
   if (state.household.quests.some((quest) => quest.completedByPlayerId && !playerIds.has(quest.completedByPlayerId))) return false;
   if (state.household.lifecycle.questHistory.some((entry) => entry.playerId && !playerIds.has(entry.playerId))) return false;
-  const zoneIds = new Set(["household", "kitchen"]);
+  const zoneIds = new Set(["household", "kitchen", "bathroom"]);
   if (state.household.quests.some((quest) => !zoneIds.has(quest.zoneId)) || state.household.questTemplates.some((template) => !zoneIds.has(template.zoneId))) return false;
   const templateIds = new Set(state.household.questTemplates.map((template) => template.id));
   return state.household.quests.every((quest) => !quest.templateId || templateIds.has(quest.templateId) || quest.kind === "rescue" || quest.kind === "comeback");
@@ -145,12 +172,13 @@ export function migratePersistedState(value: unknown, now = new Date()): AppStat
     if (!value || typeof value !== "object") return null;
     const raw = value as Record<string, unknown>;
     let migrated: AppState | null;
-    if (raw.schemaVersion === 6) migrated = normalizeV6(raw as unknown as AppState);
-    else if (raw.schemaVersion === 5) migrated = migrateV5ToV6(raw as unknown as LegacyV5State);
-    else if (raw.schemaVersion === 4) migrated = migrateV5ToV6(migrateV4ToV5(raw as unknown as LegacyV4State, now));
+    if (raw.schemaVersion === 7) migrated = normalizeV7(raw as unknown as AppState);
+    else if (raw.schemaVersion === 6) migrated = migrateV6ToV7(raw as unknown as LegacyV6State);
+    else if (raw.schemaVersion === 5) migrated = migrateV6ToV7(migrateV5ToV6(raw as unknown as LegacyV5State));
+    else if (raw.schemaVersion === 4) migrated = migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(raw as unknown as LegacyV4State, now)));
     else {
       const v4 = raw.schemaVersion === 3 ? migrateV3(raw, now) : (() => { const v1Quests = normalizedV1Quests(raw); const v3 = v1Quests ? migrateV2({ ...raw, schemaVersion: 2, quests: v1Quests, lifecycle: { dailyHistory: [], questHistory: [] } }, now) : migrateV2(raw, now); return v3 ? migrateV3(v3, now) : null; })();
-      migrated = v4 ? migrateV5ToV6(migrateV4ToV5(v4, now)) : null;
+      migrated = v4 ? migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(v4, now))) : null;
     }
     return migrated && validateAppState(migrated) ? migrated : null;
   } catch {

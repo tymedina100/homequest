@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, ChevronRight, Coins, Compass, Gift, Home, Leaf, Lock, ShieldCheck, Sparkles } from "lucide-react";
+import { Bath, ChefHat, ChevronRight, Coins, Compass, Gift, Home, Leaf, Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { getLevelProgress } from "@/domain/progression";
 import { recommendQuest } from "@/domain/recommendations";
 import type { HomeStatKey } from "@/domain/types";
@@ -11,7 +11,7 @@ import { DailyContextControls } from "@/components/daily-context";
 import { getHomeLevelProgress } from "@/domain/home-progression";
 import { DAILY_CHEST_QUESTS } from "@/domain/game-balance";
 import { CharacterAvatar } from "@/components/character-avatar";
-import { calculateKitchenHarmony, getZoneLevelProgress } from "@/domain/zones";
+import { calculateBathroomHarmony, calculateKitchenHarmony, getBathroomLevelProgress, getZoneLevelProgress } from "@/domain/zones";
 
 const statLabels: Record<HomeStatKey, { label: string; icon: string }> = {
   cleanliness: { label: "Clean", icon: "✦" },
@@ -20,7 +20,7 @@ const statLabels: Record<HomeStatKey, { label: string; icon: string }> = {
   kitchen: { label: "Kitchen", icon: "⌂" },
 };
 
-export function HomeView({ goToQuests, goToKitchen }: { goToQuests: () => void; goToKitchen: () => void }) {
+export function HomeView({ goToQuests, goToKitchen, goToBathroom }: { goToQuests: () => void; goToKitchen: () => void; goToBathroom: () => void }) {
   const { state, activePlayer, completeQuest, updateDailyContext, claimDailyChest } = useHomeQuest();
   const household = state.household;
   const progress = getLevelProgress(activePlayer.progression.totalXp);
@@ -29,6 +29,8 @@ export function HomeView({ goToQuests, goToKitchen }: { goToQuests: () => void; 
   const available = household.quests.filter((quest) => quest.status === "available");
   const kitchenProgress = getZoneLevelProgress(household.zones.kitchen.totalXp);
   const kitchenHarmony = calculateKitchenHarmony(household.zones.kitchen.condition);
+  const bathroomProgress = getBathroomLevelProgress(household.zones.bathroom.totalXp);
+  const bathroomHarmony = calculateBathroomHarmony(household.zones.bathroom.condition);
 
   return (
     <div className="view-stack home-view">
@@ -83,7 +85,7 @@ export function HomeView({ goToQuests, goToKitchen }: { goToQuests: () => void; 
         </aside>
       </div>
 
-      <section className="home-zones"><SectionHeading eyebrow="The house is becoming your game board" title="Our Home" /><button className="zone-entry-card panel" onClick={goToKitchen}><div className="zone-entry-art"><ChefHat size={28} /><i /></div><div><span className="eyebrow">First active zone</span><h3>Enter the Kitchen</h3><p>{kitchenProgress.tierName} · Level {kitchenProgress.level}</p></div><div className="zone-entry-condition"><strong>{kitchenHarmony}%</strong><span>Harmony</span></div><ChevronRight size={20} /></button></section>
+      <section className="home-zones"><SectionHeading eyebrow="The house is becoming your game board" title="Our Home" /><div className="zone-entry-grid"><button className="zone-entry-card panel" onClick={goToKitchen}><div className="zone-entry-art"><ChefHat size={28} /><i /></div><div><span className="eyebrow">Shared home zone</span><h3>Enter the Kitchen</h3><p>{kitchenProgress.tierName} · Level {kitchenProgress.level}</p></div><div className="zone-entry-condition"><strong>{kitchenHarmony}%</strong><span>Harmony</span></div><ChevronRight size={20} /></button><button className="zone-entry-card bathroom-entry panel" onClick={goToBathroom}><div className="zone-entry-art"><Bath size={28} /><i /></div><div><span className="eyebrow">Shared home zone</span><h3>Enter the Bathroom</h3><p>{bathroomProgress.tierName} · Level {bathroomProgress.level}</p></div><div className="zone-entry-condition"><strong>{bathroomHarmony}%</strong><span>Harmony</span></div><ChevronRight size={20} /></button></div></section>
 
       <section>
         <SectionHeading eyebrow="A short, kind list" title="Today’s quests" action={<button className="text-button" onClick={goToQuests}>See quest log <ChevronRight size={16} /></button>} />

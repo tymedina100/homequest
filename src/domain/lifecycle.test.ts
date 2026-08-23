@@ -78,6 +78,14 @@ describe("daily quest lifecycle", () => {
     expect(aged.household.zones.kitchen.condition.dishes).toBe(initial.household.zones.kitchen.condition.dishes - 2);
     expect(aged.household.zones.kitchen.totalXp).toBe(beforeXp);
   });
+  it("gently ages Bathroom condition and creates a Bathroom Rescue for a stale room task", () => {
+    const initial = createSeedState(localDate(2026, 8, 1)); const beforeXp = initial.household.zones.bathroom.totalXp;
+    const aged = initializeDailyLifecycle(initial, localDate(2026, 8, 2));
+    expect(aged.household.zones.bathroom.condition.toilet).toBe(initial.household.zones.bathroom.condition.toilet - 2);
+    expect(aged.household.zones.bathroom.totalXp).toBe(beforeXp);
+    const rescued = initializeDailyLifecycle(createSeedState(localDate(2026, 8, 1)), localDate(2026, 8, 22));
+    expect(rescued.household.quests.find((quest) => quest.kind === "rescue" && quest.rescueOf === "bathroom-reset")?.title).toBe("Bathroom Rescue");
+  });
 
   it("offers one welcoming comeback after three inactive days, not after one", () => {
     const initial = createSeedState(localDate(2026, 8, 1));

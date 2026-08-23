@@ -13,11 +13,15 @@ export type RewardMode = "automatic" | "manual";
 export type SkillKey = QuestCategory;
 export type CosmeticType = "theme" | "decoration" | "title" | "accent";
 export type DecorationSlot = "plant" | "light" | "floor" | "wall" | "shelf";
-export type ZoneId = "kitchen";
+export type ZoneId = "kitchen" | "bathroom";
 export type QuestZoneId = ZoneId | "household";
-export type ZoneType = "kitchen";
+export type ZoneType = ZoneId;
 export type KitchenConditionKey = "dishes" | "counters" | "floor" | "trash" | "food";
 export type KitchenCondition = Record<KitchenConditionKey, number>;
+export type BathroomConditionKey = "sink" | "toilet" | "shower" | "floor" | "supplies";
+export type BathroomCondition = Record<BathroomConditionKey, number>;
+export type ZoneConditionKey = KitchenConditionKey | BathroomConditionKey;
+export type ZoneEffects = Partial<Record<ZoneConditionKey, number>>;
 export type ZoneDecorationSlot = "counter" | "wall" | "shelf" | "plant" | "lighting" | "floor";
 export type PlayerId = string;
 export type SkinTone = "porcelain" | "peach" | "golden" | "warm" | "brown" | "deep";
@@ -58,7 +62,7 @@ export interface Quest {
   /** Structured room ownership. Household is the safe default for legacy/custom work. */
   zoneId: QuestZoneId;
   /** Room-local condition changes, applied only by the completion transaction. */
-  zoneEffects?: Partial<KitchenCondition>;
+  zoneEffects?: ZoneEffects;
   createdAt: string;
   lastCompletedAt?: string;
   dueAt?: string;
@@ -81,7 +85,7 @@ export interface QuestTemplate {
   escalation: EscalationPolicy;
   statEffects: Partial<Record<HomeStatKey, number>>;
   zoneId: QuestZoneId;
-  zoneEffects?: Partial<KitchenCondition>;
+  zoneEffects?: ZoneEffects;
   preferredDaypart?: Daypart;
   active: boolean;
   createdAt: string;
@@ -175,15 +179,27 @@ export interface ZoneCosmeticCollection {
   equippedDecorationIds: Partial<Record<ZoneDecorationSlot, string>>;
 }
 
-export interface ZoneState {
-  id: ZoneId;
+export interface KitchenZoneState {
+  id: "kitchen";
   displayName: string;
-  type: ZoneType;
+  type: "kitchen";
   totalXp: number;
   condition: KitchenCondition;
   cosmetics: ZoneCosmeticCollection;
   metadata: { initializedFromSchema: number };
 }
+
+export interface BathroomZoneState {
+  id: "bathroom";
+  displayName: string;
+  type: "bathroom";
+  totalXp: number;
+  condition: BathroomCondition;
+  cosmetics: ZoneCosmeticCollection;
+  metadata: { initializedFromSchema: number };
+}
+
+export type ZoneState = KitchenZoneState | BathroomZoneState;
 
 export interface PlayerCosmeticCollection {
   ownedIds: string[];
@@ -261,13 +277,13 @@ export interface HouseholdState {
   homeStats: HomeStats;
   inventory: InventoryItem[];
   homeProgression: HomeProgression;
-  zones: Record<ZoneId, ZoneState>;
+  zones: { kitchen: KitchenZoneState; bathroom: BathroomZoneState };
   cosmetics: HouseholdCosmeticCollection;
   lifecycle: DailyLifecycleState;
 }
 
 export interface AppState {
-  schemaVersion: 6;
+  schemaVersion: 7;
   household: HouseholdState;
   players: Record<PlayerId, PlayerState>;
   session: {

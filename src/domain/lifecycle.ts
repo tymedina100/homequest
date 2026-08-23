@@ -1,8 +1,8 @@
 import { addDays, dateKeyFromIso, daysBetween, toLocalDateKey } from "./dates";
 import { isDueOnDate, isRecurring } from "./recurrence";
 import { createQuestOccurrence } from "./templates";
-import { decayKitchenCondition, weakestKitchenConditions } from "./zones";
-import type { AppState, DailyHistoryEntry, KitchenCondition, KitchenConditionKey, LocalDateKey, PlayerId, Quest, QuestTemplate } from "./types";
+import { decayBathroomCondition, decayKitchenCondition, weakestBathroomConditions, weakestKitchenConditions } from "./zones";
+import type { AppState, BathroomCondition, BathroomConditionKey, DailyHistoryEntry, KitchenCondition, KitchenConditionKey, LocalDateKey, PlayerId, Quest, QuestTemplate, ZoneConditionKey, ZoneEffects } from "./types";
 
 export { isDueOnDate } from "./recurrence";
 
@@ -28,21 +28,25 @@ function addDailyEntry(entries: DailyHistoryEntry[], date: LocalDateKey, field: 
 
 function rescueTitle(quest: Quest): string {
   if (quest.zoneId === "kitchen") return "Kitchen Rescue";
+  if (quest.zoneId === "bathroom") return "Bathroom Rescue";
   if (quest.category === "organization") return "Laundry Rescue";
   if (quest.category === "homekeeping") return "Living Space Rescue";
   return "Home Rescue";
 }
 
 const kitchenConditionLabels: Record<KitchenConditionKey, string> = { dishes: "dishes", counters: "counters", floor: "floor", trash: "trash", food: "food supplies" };
+const bathroomConditionLabels: Record<BathroomConditionKey, string> = { sink: "sink", toilet: "toilet", shower: "shower", floor: "floor", supplies: "bathroom supplies" };
 
-export function createRescueQuest(quest: Quest, date: LocalDateKey, kitchenCondition?: KitchenCondition): Quest {
+export function createRescueQuest(quest: Quest, date: LocalDateKey, kitchenCondition?: KitchenCondition, bathroomCondition?: BathroomCondition): Quest {
   const templateId = quest.templateId ?? quest.id;
   const statEffects = Object.fromEntries(Object.entries(quest.statEffects).map(([key, value]) => [key, (value ?? 0) * 2]));
   const weak = quest.zoneId === "kitchen" && kitchenCondition ? weakestKitchenConditions(kitchenCondition, 2) : [];
-  const zoneEffects = weak.length
-    ? Object.fromEntries(weak.map((key, index) => [key, index === 0 ? 24 : 18])) as Partial<KitchenCondition>
+  const bathroomWeak = quest.zoneId === "bathroom" && bathroomCondition ? weakestBathroomConditions(bathroomCondition, 2) : [];
+  const weakKeys = [...weak, ...bathroomWeak] as ZoneConditionKey[];
+  const zoneEffects: ZoneEffects | undefined = weakKeys.length
+    ? Object.fromEntries(weakKeys.map((key, index) => [key, index === 0 ? 24 : 18]))
     : quest.zoneEffects ? Object.fromEntries(Object.entries(quest.zoneEffects).map(([key, value]) => [key, (value ?? 0) * 2])) : undefined;
-  const weakCopy = weak.map((key) => kitchenConditionLabels[key]);
+  const weakCopy = weak.length ? weak.map((key) => kitchenConditionLabels[key]) : bathroomWeak.map((key) => bathroomConditionLabels[key]);
   return {
     ...quest,
     id: `rescue:${templateId}:${date}`,
@@ -107,6 +111,7 @@ export function initializeDailyLifecycle(state: AppState, now: Date): AppState {
   let dailyHistory = lifecycle.dailyHistory;
   let questHistory = lifecycle.questHistory;
   const agedKitchenCondition = decayKitchenCondition(state.household.zones.kitchen.condition, daysBetween(lastDate, today));
+  const agedBathroomCondition = decayBathroomCondition(state.household.zones.bathroom.condition, daysBetween(lastDate, today));
   const priorQuests = state.household.quests;
   const templates = state.household.questTemplates.filter((template) => template.active);
   const missedCounts = new Map<string, number>();
@@ -143,7 +148,7 @@ export function initializeDailyLifecycle(state: AppState, now: Date): AppState {
     const alreadyRescuing = quests.some((quest) => quest.kind === "rescue" && quest.rescueOf === templateId && quest.status === "available");
     if (template.escalation !== "rescue-eligible" || missedCount < RESCUE_MISSED_CYCLES || alreadyRescuing) continue;
     const source = quests.find((quest) => quest.templateId === templateId && quest.occurrenceDate === today) ?? createQuestOccurrence(template, today, missedCount);
-    const rescue = createRescueQuest({ ...source, missedCount }, today, agedKitchenCondition);
+    const rescue = createRescueQuest({ ...source, missedCount }, today, agedKitchenCondition, agedBathroomCondition);
     quests = [...quests.map((quest) => (quest.status === "available" && (quest.templateId ?? quest.id) === templateId ? { ...quest, status: "archived" as const } : quest)), rescue];
     questHistory = [...questHistory, { questId: rescue.id, templateId, date: today, event: "rescue-created" }];
   }
@@ -159,7 +164,7 @@ export function initializeDailyLifecycle(state: AppState, now: Date): AppState {
   return {
     ...state,
     players,
-    household: { ...state.household, quests, zones: { ...state.household.zones, kitchen: { ...state.household.zones.kitchen, condition: agedKitchenCondition } }, lifecycle: { ...lifecycle, lastLifecycleDate: today, lastOpenedDate: today, dailyHistory, questHistory } },
+    household: { ...state.household, quests, zones: { ...state.household.zones, kitchen: { ...state.household.zones.kitchen, condition: agedKitchenCondition }, bathroom: { ...state.household.zones.bathroom, condition: agedBathroomCondition } }, lifecycle: { ...lifecycle, lastLifecycleDate: today, lastOpenedDate: today, dailyHistory, questHistory } },
   };
 }
 

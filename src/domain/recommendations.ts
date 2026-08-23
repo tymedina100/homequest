@@ -1,11 +1,11 @@
-import { weakestKitchenConditions } from "./zones";
-import type { DailyContext, DailyEnergy, EffortLevel, HomeStats, KitchenCondition, KitchenConditionKey, Quest, QuestZoneId, Urgency } from "./types";
+import { weakestBathroomConditions, weakestKitchenConditions } from "./zones";
+import type { BathroomCondition, DailyContext, DailyEnergy, EffortLevel, HomeStats, KitchenCondition, Quest, QuestZoneId, Urgency, ZoneConditionKey } from "./types";
 
 const urgencyScore: Record<Urgency, number> = { gentle: 4, soon: 14, today: 26 };
 const effortValue: Record<EffortLevel, number> = { low: 1, medium: 2, high: 3 };
 const dailyEnergyValue: Record<DailyEnergy, number> = { drained: 0, low: 1, good: 2, "locked-in": 3 };
 type RecommendationContext = Pick<DailyContext, "energy" | "availableMinutes">;
-export interface RecommendationOptions { zoneId?: QuestZoneId; kitchenCondition?: KitchenCondition }
+export interface RecommendationOptions { zoneId?: QuestZoneId; kitchenCondition?: KitchenCondition; bathroomCondition?: BathroomCondition }
 
 export interface QuestRecommendation {
   quest: Quest;
@@ -17,7 +17,7 @@ function capacityFor(energy: RecommendationContext["energy"]): number {
   return dailyEnergyValue[energy];
 }
 
-export function scoreQuest(quest: Quest, context: RecommendationContext, homeStats?: HomeStats, kitchenCondition?: KitchenCondition): number {
+export function scoreQuest(quest: Quest, context: RecommendationContext, homeStats?: HomeStats, zoneCondition?: Record<string, number>): number {
   if (quest.status !== "available") return Number.NEGATIVE_INFINITY;
   if (quest.dependsOn?.length) return Number.NEGATIVE_INFINITY;
   const fitsTime = quest.estimatedMinutes <= context.availableMinutes;
@@ -25,8 +25,8 @@ export function scoreQuest(quest: Quest, context: RecommendationContext, homeSta
   const affectedStats = Object.keys(quest.statEffects) as (keyof HomeStats)[];
   const lowestAffectedStat = affectedStats.length ? Math.min(...affectedStats.map((stat) => homeStats?.[stat] ?? 100)) : 100;
   const specialWeight = quest.kind === "comeback" ? 18 : quest.kind === "rescue" ? 14 : 0;
-  const affectedKitchen = (Object.keys(quest.zoneEffects ?? {}) as KitchenConditionKey[]);
-  const weakestAffectedKitchen = affectedKitchen.length ? Math.min(...affectedKitchen.map((key) => kitchenCondition?.[key] ?? 100)) : 100;
+  const affectedZone = Object.keys(quest.zoneEffects ?? {}) as ZoneConditionKey[];
+  const weakestAffectedZone = affectedZone.length ? Math.min(...affectedZone.map((key) => zoneCondition?.[key] ?? 100)) : 100;
   return (
     urgencyScore[quest.urgency] +
     (fitsTime ? 20 : -20) +
@@ -35,7 +35,7 @@ export function scoreQuest(quest: Quest, context: RecommendationContext, homeSta
     (quest.recommendation?.momentum ?? 0) +
     specialWeight +
     (lowestAffectedStat < 45 ? 7 : 0) +
-    (weakestAffectedKitchen < 45 ? 10 : 0) +
+    (weakestAffectedZone < 45 ? 10 : 0) +
     (context.availableMinutes >= 45 && quest.estimatedMinutes >= 25 ? 8 : 0) +
     (capacityFor(context.energy) === 0 && quest.estimatedMinutes <= 5 ? 8 : 0) +
     Math.min(quest.xpReward / 5, 10)
@@ -47,10 +47,12 @@ function contextPhrase(context: RecommendationContext): string {
   return `you’ve got ${context.availableMinutes >= 60 ? "60+" : context.availableMinutes} minutes and ${energy}`;
 }
 
-function explain(quest: Quest, context: RecommendationContext, kitchenCondition?: KitchenCondition): string {
+function explain(quest: Quest, context: RecommendationContext, zoneCondition?: Record<string, number>): string {
   const reasons: string[] = [];
-  const weakKitchen = kitchenCondition ? weakestKitchenConditions(kitchenCondition, 1)[0] : undefined;
-  if (weakKitchen && (quest.zoneEffects?.[weakKitchen] ?? 0) > 0) reasons.push(`${weakKitchen} are the Kitchen’s weakest area`);
+  const weakZone = quest.zoneId === "kitchen" && zoneCondition ? weakestKitchenConditions(zoneCondition as KitchenCondition, 1)[0]
+    : quest.zoneId === "bathroom" && zoneCondition ? weakestBathroomConditions(zoneCondition as BathroomCondition, 1)[0]
+      : undefined;
+  if (weakZone && (quest.zoneEffects?.[weakZone] ?? 0) > 0) reasons.push(`${weakZone} are the ${quest.zoneId === "bathroom" ? "Bathroom’s" : "Kitchen’s"} weakest area`);
   reasons.push(contextPhrase(context));
   if (quest.estimatedMinutes <= 10) reasons.push("it’s quick");
   if (quest.urgency === "today") reasons.push("it needs attention today");
@@ -67,9 +69,9 @@ function explain(quest: Quest, context: RecommendationContext, kitchenCondition?
 export function recommendQuest(quests: Quest[], context: RecommendationContext, homeStats?: HomeStats, options: RecommendationOptions = {}): QuestRecommendation | null {
   const ranked = quests
     .filter((quest) => !options.zoneId || quest.zoneId === options.zoneId)
-    .map((quest) => ({ quest, score: scoreQuest(quest, context, homeStats, options.kitchenCondition) }))
+    .map((quest) => ({ quest, score: scoreQuest(quest, context, homeStats, options.zoneId === "bathroom" ? options.bathroomCondition : options.kitchenCondition) }))
     .filter((item) => Number.isFinite(item.score))
     .sort((a, b) => b.score - a.score || a.quest.estimatedMinutes - b.quest.estimatedMinutes);
   if (!ranked[0]) return null;
-  return { ...ranked[0], reason: explain(ranked[0].quest, context, options.kitchenCondition) };
+  return { ...ranked[0], reason: explain(ranked[0].quest, context, options.zoneId === "bathroom" ? options.bathroomCondition : options.kitchenCondition) };
 }

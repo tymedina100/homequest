@@ -2,7 +2,12 @@ import { createSeedState } from "@/data/seed";
 import { TYLER_PLAYER_ID } from "@/domain/players";
 
 /** Small realistic persisted fixtures for migration and restore regression tests. */
-export function schemaV6Fixture() { return structuredClone(createSeedState(new Date(2026, 7, 23, 10))); }
+export function schemaV6Fixture() {
+  const current = structuredClone(createSeedState(new Date(2026, 7, 23, 10)));
+  const { bathroom: _bathroom, ...zones } = current.household.zones;
+  void _bathroom;
+  return { ...current, schemaVersion: 6 as const, household: { ...current.household, zones } };
+}
 
 export function schemaV5Fixture() {
   const current = schemaV6Fixture();

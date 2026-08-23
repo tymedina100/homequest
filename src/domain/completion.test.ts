@@ -35,4 +35,12 @@ describe("atomic completion transaction", () => {
     expect(result.summary?.kitchenXp).toBe(0);
     expect(result.state.household.zones.kitchen).toEqual(state.household.zones.kitchen);
   });
+  it("applies shared Bathroom condition and XP once while keeping rewards personal", () => {
+    const state = createSeedState(); const before = structuredClone(state);
+    const result = completeQuestTransaction(state, "bathroom-reset", RACHEL_PLAYER_ID, "2026-08-23T10:00:00.000Z");
+    expect(result.summary).toMatchObject({ playerName: "Rachel", bathroomXp: 15, bathroomEffects: { toilet: 16 } });
+    expect(result.state.household.zones.bathroom.condition.toilet).toBeGreaterThan(before.household.zones.bathroom.condition.toilet);
+    expect(result.state.household.zones.bathroom.totalXp).toBe(before.household.zones.bathroom.totalXp + 15);
+    expect(result.state.players[TYLER_PLAYER_ID].progression).toEqual(before.players[TYLER_PLAYER_ID].progression);
+  });
 });

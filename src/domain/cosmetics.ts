@@ -2,7 +2,7 @@ import { ACHIEVEMENTS } from "./achievements";
 import { getHomeLevelProgress } from "./home-progression";
 import { updatePlayer } from "./players";
 import { getSkillLevelProgress } from "./skills";
-import { getZoneLevelProgress } from "./zones";
+import { getBathroomLevelProgress, getZoneLevelProgress } from "./zones";
 import type { AppState, CosmeticCollection, CosmeticType, DecorationSlot, HouseholdCosmeticCollection, PlayerId, SkillKey, ZoneDecorationSlot, ZoneId } from "./types";
 
 export interface CosmeticRequirement { kind: "none" | "home-level" | "zone-level" | "skill-level" | "achievement"; level?: number; skill?: SkillKey; achievementId?: string; zoneId?: ZoneId }
@@ -27,6 +27,13 @@ export const COSMETICS: CosmeticDefinition[] = [
   { id: "window-plant", title: "Window Plant", description: "A leafy companion for the sunniest Kitchen ledge.", type: "decoration", zoneId: "kitchen", zoneSlot: "plant", cost: 22, requirement: { kind: "skill-level", skill: "cleaning", level: 2 }, preview: "window-plant" },
   { id: "cozy-kitchen-runner", title: "Cozy Runner", description: "A soft woven path between sink and stove.", type: "decoration", zoneId: "kitchen", zoneSlot: "floor", cost: 32, requirement: { kind: "zone-level", zoneId: "kitchen", level: 3 }, preview: "runner" },
   { id: "recipe-board", title: "Recipe Board", description: "A chalkboard for reliable favorites and small experiments.", type: "decoration", zoneId: "kitchen", zoneSlot: "wall", cost: 50, requirement: { kind: "zone-level", zoneId: "kitchen", level: 8 }, preview: "recipe-board" },
+  { id: "bathroom-candle", title: "Soft Candle", description: "A small warm glow for unhurried evenings.", type: "decoration", zoneId: "bathroom", zoneSlot: "counter", cost: 18, requirement: { kind: "none" }, preview: "bathroom-candle" },
+  { id: "bathroom-plant", title: "Shower Plant", description: "A hardy green companion for the humid corner.", type: "decoration", zoneId: "bathroom", zoneSlot: "plant", cost: 26, requirement: { kind: "zone-level", zoneId: "bathroom", level: 3 }, preview: "bathroom-plant" },
+  { id: "bathroom-sconce", title: "Warm Sconce", description: "Soft light that makes the mirror feel kinder.", type: "decoration", zoneId: "bathroom", zoneSlot: "lighting", cost: 34, requirement: { kind: "skill-level", skill: "cleaning", level: 3 }, preview: "bathroom-sconce" },
+  { id: "bathroom-art", title: "Tiny Gallery", description: "A small print that gives the wall some personality.", type: "decoration", zoneId: "bathroom", zoneSlot: "wall", cost: 16, requirement: { kind: "none" }, preview: "bathroom-art" },
+  { id: "bathroom-towel-ladder", title: "Towel Ladder", description: "A simple place for fresh towels to wait.", type: "decoration", zoneId: "bathroom", zoneSlot: "shelf", cost: 30, requirement: { kind: "zone-level", zoneId: "bathroom", level: 5 }, preview: "bathroom-towels" },
+  { id: "bathroom-mat", title: "Cloud Bath Mat", description: "A soft landing after a shower.", type: "decoration", zoneId: "bathroom", zoneSlot: "floor", cost: 24, requirement: { kind: "none" }, preview: "bathroom-mat" },
+  { id: "bathroom-amber-jars", title: "Amber Jars", description: "Useful everyday things, gathered with care.", type: "decoration", zoneId: "bathroom", zoneSlot: "counter", cost: 38, requirement: { kind: "zone-level", zoneId: "bathroom", level: 8 }, preview: "bathroom-jars" },
   { id: "title-little-things", title: "Keeper of Little Things", description: "A profile title earned by completing your own quest.", type: "title", cost: 0, requirement: { kind: "achievement", achievementId: "first-step" }, preview: "title" },
   { id: "moss-accent", title: "Moss Accent", description: "A subdued green accent for interface details.", type: "accent", cost: 25, requirement: { kind: "home-level", level: 2 }, preview: "accent" },
 ];
@@ -46,7 +53,7 @@ export function requirementMet(state: AppState, item: CosmeticDefinition, player
   const req = item.requirement;
   if (req.kind === "none") return true;
   if (req.kind === "home-level") return getHomeLevelProgress(state.household.homeProgression).level >= (req.level ?? 1);
-  if (req.kind === "zone-level" && req.zoneId) return getZoneLevelProgress(state.household.zones[req.zoneId].totalXp).level >= (req.level ?? 1);
+  if (req.kind === "zone-level" && req.zoneId) return (req.zoneId === "bathroom" ? getBathroomLevelProgress(state.household.zones.bathroom.totalXp) : getZoneLevelProgress(state.household.zones.kitchen.totalXp)).level >= (req.level ?? 1);
   if (req.kind === "skill-level" && req.skill) return getSkillLevelProgress(player.skills[req.skill]).level >= (req.level ?? 1);
   if (req.kind === "achievement") return player.achievements.some((achievement) => achievement.id === req.achievementId && achievement.unlockedAt);
   return false;
@@ -98,7 +105,7 @@ export function equipCosmetic(state: AppState, itemId: string, playerId: PlayerI
 export function requirementLabel(item: CosmeticDefinition): string {
   const req = item.requirement;
   if (req.kind === "home-level") return `Home Level ${req.level}`;
-  if (req.kind === "zone-level") return `Kitchen Level ${req.level}`;
+  if (req.kind === "zone-level") return `${req.zoneId === "bathroom" ? "Bathroom" : "Kitchen"} Level ${req.level}`;
   if (req.kind === "skill-level") return `${req.skill ? req.skill[0].toUpperCase() + req.skill.slice(1) : "Skill"} Level ${req.level}`;
   if (req.kind === "achievement") return ACHIEVEMENTS.find((achievement) => achievement.id === req.achievementId)?.hidden ? "Hidden achievement" : ACHIEVEMENTS.find((achievement) => achievement.id === req.achievementId)?.title ?? "Achievement";
   return item.cost ? `${item.cost} coins` : "Available";
