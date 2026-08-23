@@ -52,6 +52,8 @@ describe("daily quest lifecycle", () => {
     const rescued = initializeDailyLifecycle(createSeedState(localDate(2026, 8, 1)), localDate(2026, 8, 4));
     expect(rescued.household.quests.filter((quest) => quest.kind === "rescue" && quest.rescueOf === "dishwasher" && quest.status === "available")).toHaveLength(1);
     expect(rescued.household.quests.find((quest) => quest.kind === "rescue" && quest.rescueOf === "dishwasher")?.title).toBe("Kitchen Rescue");
+    expect(rescued.household.quests.find((quest) => quest.kind === "rescue" && quest.rescueOf === "dishwasher")?.description).toMatch(/need attention/i);
+    expect(Object.keys(rescued.household.quests.find((quest) => quest.kind === "rescue" && quest.rescueOf === "dishwasher")?.zoneEffects ?? {})).toHaveLength(2);
     expect(initializeDailyLifecycle(rescued, localDate(2026, 8, 4)).household.quests.filter((quest) => quest.kind === "rescue" && quest.rescueOf === "dishwasher" && quest.status === "available")).toHaveLength(1);
     const gentle = createSeedState(localDate(2026, 8, 1));
     gentle.household.questTemplates = gentle.household.questTemplates.map((template) => template.id === "dishwasher" ? { ...template, escalation: "non-escalating" } : template);
@@ -66,6 +68,15 @@ describe("daily quest lifecycle", () => {
     expect(completed.players[TYLER_PLAYER_ID].progression.totalXp).toBe(withRescue.players[TYLER_PLAYER_ID].progression.totalXp + rescue.xpReward);
     expect(completed.household.homeStats.kitchen).toBe(100);
     expect(completed.household.quests.find((quest) => quest.id === rescue.id)?.status).toBe("completed");
+    expect(completed.household.zones.kitchen.totalXp).toBeGreaterThan(withRescue.household.zones.kitchen.totalXp);
+    expect(completeQuest(completed, rescue.id, TYLER_PLAYER_ID, isoAt(2026, 8, 4)).household.zones.kitchen).toEqual(completed.household.zones.kitchen);
+  });
+
+  it("gently ages current Kitchen condition without subtracting permanent XP", () => {
+    const initial = createSeedState(localDate(2026, 8, 1)); const beforeXp = initial.household.zones.kitchen.totalXp;
+    const aged = initializeDailyLifecycle(initial, localDate(2026, 8, 2));
+    expect(aged.household.zones.kitchen.condition.dishes).toBe(initial.household.zones.kitchen.condition.dishes - 2);
+    expect(aged.household.zones.kitchen.totalXp).toBe(beforeXp);
   });
 
   it("offers one welcoming comeback after three inactive days, not after one", () => {

@@ -40,7 +40,7 @@ export interface WeeklySummary {
 
 export interface TomorrowPreview {
   date: LocalDateKey;
-  quests: Array<Pick<Quest, "id" | "title" | "category" | "estimatedMinutes" | "urgency">>;
+  quests: Array<Pick<Quest, "id" | "title" | "category" | "estimatedMinutes" | "urgency" | "zoneId">>;
   estimatedMinutes: number;
   focusArea?: string;
   notableRisk?: string;
@@ -186,6 +186,7 @@ export function getTomorrowPreview(state: AppState, today: LocalDateKey): Tomorr
       id: `${template.id}:${date}`,
       title: template.title,
       category: template.category,
+      zoneId: template.zoneId,
       estimatedMinutes: template.estimatedMinutes,
       urgency: template.urgency,
     }))
@@ -201,5 +202,5 @@ export function getTomorrowPreview(state: AppState, today: LocalDateKey): Tomorr
       right.estimatedMinutes - left.estimatedMinutes,
   )[0];
   const activeRescue = state.household.quests.find((quest) => quest.kind === "rescue" && quest.status === "available");
-  return { date, quests, estimatedMinutes: quests.reduce((total, quest) => total + quest.estimatedMinutes, 0), focusArea: focusQuest ? (focusQuest.category === "cooking" ? "Kitchen" : focusQuest.category === "organization" ? "Organization" : "Cleanliness") : undefined, notableRisk: activeRescue ? `${activeRescue.title} is already waiting on your board.` : undefined };
+  return { date, quests, estimatedMinutes: quests.reduce((total, quest) => total + quest.estimatedMinutes, 0), focusArea: focusQuest ? (focusQuest.zoneId === "kitchen" ? "Kitchen" : focusQuest.category === "organization" ? "Organization" : "Cleanliness") : undefined, notableRisk: activeRescue ? `${activeRescue.title} is already waiting on your board.` : undefined };
 }

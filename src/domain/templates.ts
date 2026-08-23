@@ -12,17 +12,17 @@ export const defaultStatEffects: Record<QuestCategory, QuestTemplate["statEffect
   homekeeping: { cleanliness: 5, organization: 3 },
 };
 
-export const questPresets: Array<Pick<QuestTemplate, "title" | "description" | "category" | "estimatedMinutes" | "effort" | "recurrence" | "urgency" | "escalation" | "statEffects">> = [
-  { title: "Run dishwasher", description: "Load the dishes and start a cycle.", category: "cleaning", estimatedMinutes: 5, effort: "low", recurrence: { cadence: "daily" }, urgency: "soon", escalation: "rescue-eligible", statEffects: { kitchen: 8, cleanliness: 4 } },
-  { title: "Kitchen reset", description: "Clear the counters and restore a usable kitchen.", category: "cleaning", estimatedMinutes: 15, effort: "medium", recurrence: { cadence: "daily" }, urgency: "soon", escalation: "rescue-eligible", statEffects: { kitchen: 9, cleanliness: 8 } },
-  { title: "Take out trash", description: "Take the bag out and add a fresh liner.", category: "homekeeping", estimatedMinutes: 6, effort: "low", recurrence: { cadence: "weekdays", daysOfWeek: [2, 5] }, urgency: "today", escalation: "rescue-eligible", statEffects: { cleanliness: 6, organization: 3 } },
-  { title: "Put away laundry", description: "Put away one basket.", category: "organization", estimatedMinutes: 15, effort: "medium", recurrence: { cadence: "weekly", daysOfWeek: [6] }, urgency: "soon", escalation: "rescue-eligible", statEffects: { organization: 8 } },
-  { title: "Start laundry", description: "Start one practical load.", category: "organization", estimatedMinutes: 8, effort: "low", recurrence: { cadence: "weekly", daysOfWeek: [3] }, urgency: "soon", escalation: "gentle", statEffects: { organization: 4 } },
-  { title: "Clean bathroom", description: "A focused refresh of the bathroom.", category: "cleaning", estimatedMinutes: 30, effort: "high", recurrence: { cadence: "weekly", daysOfWeek: [0] }, urgency: "soon", escalation: "rescue-eligible", statEffects: { cleanliness: 10 } },
-  { title: "Vacuum", description: "Clear the floor in the space that needs it most.", category: "cleaning", estimatedMinutes: 20, effort: "medium", recurrence: { cadence: "weekly", daysOfWeek: [6] }, urgency: "gentle", escalation: "gentle", statEffects: { cleanliness: 8 } },
-  { title: "Change sheets", description: "Fresh bedding for the week ahead.", category: "homekeeping", estimatedMinutes: 15, effort: "medium", recurrence: { cadence: "weekly", daysOfWeek: [0] }, urgency: "gentle", escalation: "non-escalating", statEffects: { cleanliness: 4, organization: 3 } },
-  { title: "Grocery planning", description: "Make a short, useful grocery plan.", category: "organization", estimatedMinutes: 10, effort: "low", recurrence: { cadence: "weekly", daysOfWeek: [0] }, urgency: "soon", escalation: "non-escalating", statEffects: { supplies: 5, organization: 3 } },
-  { title: "Meal prep", description: "Prep one thing that makes later meals easier.", category: "cooking", estimatedMinutes: 45, effort: "high", recurrence: { cadence: "weekly", daysOfWeek: [0] }, urgency: "gentle", escalation: "non-escalating", statEffects: { kitchen: 7, supplies: 4 } },
+export const questPresets: Array<Pick<QuestTemplate, "title" | "description" | "category" | "estimatedMinutes" | "effort" | "recurrence" | "urgency" | "escalation" | "statEffects" | "zoneId" | "zoneEffects">> = [
+  { title: "Run dishwasher", description: "Load the dishes and start a cycle.", category: "cleaning", estimatedMinutes: 5, effort: "low", recurrence: { cadence: "daily" }, urgency: "soon", escalation: "rescue-eligible", statEffects: { kitchen: 8, cleanliness: 4 }, zoneId: "kitchen", zoneEffects: { dishes: 20, counters: 4 } },
+  { title: "Kitchen reset", description: "Clear the counters and restore a usable kitchen.", category: "cleaning", estimatedMinutes: 15, effort: "medium", recurrence: { cadence: "daily" }, urgency: "soon", escalation: "rescue-eligible", statEffects: { kitchen: 9, cleanliness: 8 }, zoneId: "kitchen", zoneEffects: { dishes: 10, counters: 16, trash: 8 } },
+  { title: "Take out trash", description: "Take the bag out and add a fresh liner.", category: "homekeeping", estimatedMinutes: 6, effort: "low", recurrence: { cadence: "weekdays", daysOfWeek: [2, 5] }, urgency: "today", escalation: "rescue-eligible", statEffects: { cleanliness: 6, organization: 3 }, zoneId: "kitchen", zoneEffects: { trash: 22 } },
+  { title: "Put away laundry", description: "Put away one basket.", category: "organization", estimatedMinutes: 15, effort: "medium", recurrence: { cadence: "weekly", daysOfWeek: [6] }, urgency: "soon", escalation: "rescue-eligible", statEffects: { organization: 8 }, zoneId: "household" },
+  { title: "Start laundry", description: "Start one practical load.", category: "organization", estimatedMinutes: 8, effort: "low", recurrence: { cadence: "weekly", daysOfWeek: [3] }, urgency: "soon", escalation: "gentle", statEffects: { organization: 4 }, zoneId: "household" },
+  { title: "Clean bathroom", description: "A focused refresh of the bathroom.", category: "cleaning", estimatedMinutes: 30, effort: "high", recurrence: { cadence: "weekly", daysOfWeek: [0] }, urgency: "soon", escalation: "rescue-eligible", statEffects: { cleanliness: 10 }, zoneId: "household" },
+  { title: "Vacuum", description: "Clear the floor in the space that needs it most.", category: "cleaning", estimatedMinutes: 20, effort: "medium", recurrence: { cadence: "weekly", daysOfWeek: [6] }, urgency: "gentle", escalation: "gentle", statEffects: { cleanliness: 8 }, zoneId: "household" },
+  { title: "Change sheets", description: "Fresh bedding for the week ahead.", category: "homekeeping", estimatedMinutes: 15, effort: "medium", recurrence: { cadence: "weekly", daysOfWeek: [0] }, urgency: "gentle", escalation: "non-escalating", statEffects: { cleanliness: 4, organization: 3 }, zoneId: "household" },
+  { title: "Grocery planning", description: "Make a short, useful grocery plan.", category: "organization", estimatedMinutes: 10, effort: "low", recurrence: { cadence: "weekly", daysOfWeek: [0] }, urgency: "soon", escalation: "non-escalating", statEffects: { supplies: 5, organization: 3 }, zoneId: "household" },
+  { title: "Meal prep", description: "Prep one thing that makes later meals easier.", category: "cooking", estimatedMinutes: 45, effort: "high", recurrence: { cadence: "weekly", daysOfWeek: [0] }, urgency: "gentle", escalation: "non-escalating", statEffects: { kitchen: 7, supplies: 4 }, zoneId: "kitchen", zoneEffects: { food: 18, counters: -2, dishes: -2 } },
 ];
 
 export function templateXpReward(template: Pick<QuestTemplate, "rewardMode" | "manualXpReward" | "estimatedMinutes" | "effort" | "urgency" | "recurrence">): number {
@@ -45,6 +45,8 @@ export function createQuestOccurrence(template: QuestTemplate, date: LocalDateKe
     recurrence: template.recurrence,
     escalation: template.escalation,
     statEffects: template.statEffects,
+    zoneId: template.zoneId,
+    zoneEffects: template.zoneEffects,
     createdAt: template.createdAt,
     occurrenceDate: date,
     missedCount,

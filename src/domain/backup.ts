@@ -1,6 +1,7 @@
 import { toLocalDateKey } from "./dates";
 import { migratePersistedState, validateAppState } from "@/persistence/store";
 import type { AppState } from "./types";
+import { getZoneLevelProgress } from "./zones";
 
 export const BACKUP_APPLICATION_ID = "homequest";
 export const BACKUP_FORMAT_VERSION = 1;
@@ -19,6 +20,8 @@ export interface RestorePreview {
   homeXp: number;
   templateCount: number;
   inventoryCount: number;
+  kitchenXp: number;
+  kitchenLevel: number;
   createdAt: string;
 }
 
@@ -38,7 +41,8 @@ export function backupFilename(now = new Date()): string {
 
 export function createRestorePreview(backup: Pick<HomeQuestBackup, "createdAt" | "payload">): RestorePreview {
   const { payload } = backup;
-  return { householdName: payload.household.name, playerNames: payload.household.playerIds.map((id) => payload.players[id]?.name).filter((name): name is string => Boolean(name)), homeXp: payload.household.homeProgression.totalXp, templateCount: payload.household.questTemplates.length, inventoryCount: payload.household.inventory.length, createdAt: backup.createdAt };
+  const kitchen = getZoneLevelProgress(payload.household.zones.kitchen.totalXp);
+  return { householdName: payload.household.name, playerNames: payload.household.playerIds.map((id) => payload.players[id]?.name).filter((name): name is string => Boolean(name)), homeXp: payload.household.homeProgression.totalXp, templateCount: payload.household.questTemplates.length, inventoryCount: payload.household.inventory.length, kitchenXp: kitchen.totalXp, kitchenLevel: kitchen.level, createdAt: backup.createdAt };
 }
 
 export function parseBackup(raw: string | unknown, now = new Date()): BackupParseResult {

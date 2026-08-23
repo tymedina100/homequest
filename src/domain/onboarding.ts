@@ -2,6 +2,7 @@ import { createSeedState, seedQuestTemplates } from "@/data/seed";
 import { defaultAvatarFor, normalizeAvatar } from "./avatar";
 import { toLocalDateKey } from "./dates";
 import { createQuestOccurrence } from "./templates";
+import { createKitchenZone } from "./zones";
 import type { AppState, AvatarConfig, PlayerState, Progression, QuestTemplate, SkillProgression } from "./types";
 
 export type HomePriority = "kitchen" | "laundry" | "cleaning" | "cooking" | "food-waste" | "organization" | "supplies" | "upkeep";
@@ -53,7 +54,7 @@ function createPlayer(input: OnboardingPlayer, today: ReturnType<typeof toLocalD
   return { id: input.id, name: input.name.trim() || "Adventurer", createdAt, coins: 0, progression: zeroProgression(), skills: zeroSkills(), achievements: [], cosmetics: { ownedIds: [] }, avatar: normalizeAvatar(input.avatar, input.id), dailyContext: { date: today, energy: "good", availableMinutes: 15 }, dailyChest: { date: today, qualifyingQuestIds: [], status: "locked" } };
 }
 
-/** Creates a complete v5 household only after the final onboarding action. */
+/** Creates a complete household only after the final onboarding action. */
 export function createOnboardedState(draft: OnboardingDraft, now = new Date()): AppState {
   const today = toLocalDateKey(now);
   const uniquePlayers = draft.players.filter((player, index, all) => player.name.trim() && all.findIndex((item) => item.id === player.id) === index).slice(0, 4);
@@ -64,8 +65,8 @@ export function createOnboardedState(draft: OnboardingDraft, now = new Date()): 
   const players = Object.fromEntries(uniquePlayers.map((player) => [player.id, createPlayer(player, today, now.toISOString())])) as AppState["players"];
   const name = draft.householdName.trim() || "Our Home";
   return {
-    schemaVersion: 5,
-    household: { ...base.household, id: `household-${slug(name, "home")}`, name, playerIds: uniquePlayers.map((player) => player.id), quests: templates.filter((template) => template.recurrence.cadence === "manual" || template.recurrence.cadence === "as-needed" || template.recurrence.cadence === "daily").map((template) => createQuestOccurrence(template, today)), questTemplates: templates, inventory: [], homeProgression: { totalXp: 0 }, homeStats: { cleanliness: 50, organization: 50, supplies: 50, kitchen: 50 }, lifecycle: { lastLifecycleDate: today, lastOpenedDate: today, lastMeaningfulActivityDate: today, dailyHistory: [], questHistory: [] } },
+    schemaVersion: 6,
+    household: { ...base.household, id: `household-${slug(name, "home")}`, name, playerIds: uniquePlayers.map((player) => player.id), quests: templates.filter((template) => template.recurrence.cadence === "manual" || template.recurrence.cadence === "as-needed" || template.recurrence.cadence === "daily").map((template) => createQuestOccurrence(template, today)), questTemplates: templates, inventory: [], homeProgression: { totalXp: 0 }, homeStats: { cleanliness: 50, organization: 50, supplies: 50, kitchen: 50 }, zones: { kitchen: createKitchenZone({ cleanliness: 50, organization: 50, supplies: 50, kitchen: 50 }) }, lifecycle: { lastLifecycleDate: today, lastOpenedDate: today, lastMeaningfulActivityDate: today, dailyHistory: [], questHistory: [] } },
     players,
     session: { activePlayerId: uniquePlayers[0].id, preferences: { reducedMotion: false } },
   };

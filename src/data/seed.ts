@@ -3,15 +3,16 @@ import { toLocalDateKey } from "@/domain/dates";
 import { createDefaultHouseholdCollection } from "@/domain/cosmetics";
 import { defaultAvatarFor } from "@/domain/avatar";
 import { HOUSEHOLD_ID, RACHEL_PLAYER_ID, TYLER_PLAYER_ID } from "@/domain/players";
+import { createKitchenZone } from "@/domain/zones";
 
 const createdAt = "2026-08-22T08:00:00.000Z";
 
 export const seedQuests: Quest[] = [
-  { id: "dishwasher", templateId: "dishwasher", title: "Run the dishwasher", description: "Load the last few dishes and start a cycle.", category: "cleaning", status: "available", xpReward: 30, estimatedMinutes: 5, effort: "low", urgency: "soon", recurrence: { cadence: "daily" }, escalation: "rescue-eligible", statEffects: { kitchen: 10, cleanliness: 5 }, createdAt, recommendation: { momentum: 8 }, comebackEligible: true },
-  { id: "dinner", templateId: "dinner", title: "Make a simple dinner", description: "Turn tonight’s ingredients into something cozy.", category: "cooking", status: "available", xpReward: 55, estimatedMinutes: 25, effort: "medium", urgency: "today", recurrence: { cadence: "manual" }, escalation: "non-escalating", statEffects: { kitchen: 7, supplies: -3 }, createdAt, recommendation: { momentum: 4 } },
-  { id: "counters", templateId: "counters", title: "Wipe kitchen counters", description: "Clear crumbs and give the counters a quick wipe.", category: "cleaning", status: "available", xpReward: 20, estimatedMinutes: 7, effort: "low", urgency: "gentle", recurrence: { cadence: "as-needed" }, escalation: "gentle", statEffects: { cleanliness: 9, kitchen: 5 }, createdAt, recommendation: { momentum: 6 }, comebackEligible: true },
-  { id: "trash", templateId: "trash", title: "Take out the trash", description: "Tie the bag, take it out, and add a fresh liner.", category: "homekeeping", status: "available", xpReward: 25, estimatedMinutes: 6, effort: "low", urgency: "today", recurrence: { cadence: "weekdays", daysOfWeek: [2, 5] }, escalation: "rescue-eligible", statEffects: { cleanliness: 7, organization: 3 }, createdAt, recommendation: { momentum: 7 }, comebackEligible: true },
-  { id: "laundry", templateId: "laundry", title: "Put away one laundry basket", description: "Just one basket—future you gets the clear chair.", category: "organization", status: "available", xpReward: 40, estimatedMinutes: 15, effort: "medium", urgency: "soon", recurrence: { cadence: "weekly", daysOfWeek: [6] }, escalation: "rescue-eligible", statEffects: { organization: 12, cleanliness: 3 }, createdAt, recommendation: { momentum: 3 }, comebackEligible: true },
+  { id: "dishwasher", templateId: "dishwasher", title: "Run the dishwasher", description: "Load the last few dishes and start a cycle.", category: "cleaning", status: "available", xpReward: 30, estimatedMinutes: 5, effort: "low", urgency: "soon", recurrence: { cadence: "daily" }, escalation: "rescue-eligible", statEffects: { kitchen: 10, cleanliness: 5 }, zoneId: "kitchen", zoneEffects: { dishes: 20, counters: 4 }, createdAt, recommendation: { momentum: 8 }, comebackEligible: true },
+  { id: "dinner", templateId: "dinner", title: "Make a simple dinner", description: "Turn tonight’s ingredients into something cozy.", category: "cooking", status: "available", xpReward: 55, estimatedMinutes: 25, effort: "medium", urgency: "today", recurrence: { cadence: "manual" }, escalation: "non-escalating", statEffects: { kitchen: 7, supplies: -3 }, zoneId: "kitchen", zoneEffects: { food: 14, counters: -3, dishes: -2 }, createdAt, recommendation: { momentum: 4 } },
+  { id: "counters", templateId: "counters", title: "Wipe kitchen counters", description: "Clear crumbs and give the counters a quick wipe.", category: "cleaning", status: "available", xpReward: 20, estimatedMinutes: 7, effort: "low", urgency: "gentle", recurrence: { cadence: "as-needed" }, escalation: "gentle", statEffects: { cleanliness: 9, kitchen: 5 }, zoneId: "kitchen", zoneEffects: { counters: 18 }, createdAt, recommendation: { momentum: 6 }, comebackEligible: true },
+  { id: "trash", templateId: "trash", title: "Take out the trash", description: "Tie the bag, take it out, and add a fresh liner.", category: "homekeeping", status: "available", xpReward: 25, estimatedMinutes: 6, effort: "low", urgency: "today", recurrence: { cadence: "weekdays", daysOfWeek: [2, 5] }, escalation: "rescue-eligible", statEffects: { cleanliness: 7, organization: 3 }, zoneId: "kitchen", zoneEffects: { trash: 22 }, createdAt, recommendation: { momentum: 7 }, comebackEligible: true },
+  { id: "laundry", templateId: "laundry", title: "Put away one laundry basket", description: "Just one basket—future you gets the clear chair.", category: "organization", status: "available", xpReward: 40, estimatedMinutes: 15, effort: "medium", urgency: "soon", recurrence: { cadence: "weekly", daysOfWeek: [6] }, escalation: "rescue-eligible", statEffects: { organization: 12, cleanliness: 3 }, zoneId: "household", createdAt, recommendation: { momentum: 3 }, comebackEligible: true },
 ];
 
 /** Milestone 0.3 keeps the existing starter chores as real reusable templates. */
@@ -26,6 +27,8 @@ export const seedQuestTemplates: QuestTemplate[] = seedQuests.map((quest) => ({
   urgency: quest.urgency,
   escalation: quest.escalation ?? "non-escalating",
   statEffects: quest.statEffects,
+  zoneId: quest.zoneId,
+  zoneEffects: quest.zoneEffects,
   active: true,
   createdAt: quest.createdAt,
   updatedAt: quest.createdAt,
@@ -70,7 +73,7 @@ function createRachel(today: ReturnType<typeof toLocalDateKey>): PlayerState {
 export function createSeedState(now = new Date()): AppState {
   const today = toLocalDateKey(now);
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     household: {
       id: HOUSEHOLD_ID, name: "Tyler & Rachel's Home", playerIds: [TYLER_PLAYER_ID, RACHEL_PLAYER_ID],
       quests: seedQuests.map((quest) => ({ ...quest, occurrenceDate: today })),
@@ -90,6 +93,7 @@ export function createSeedState(now = new Date()): AppState {
       { id: "soy", name: "Soy sauce", category: "condiment", quantity: 1, unit: "bottle", storageLocation: "pantry", ingredientTags: ["soy sauce"] },
       ],
       homeProgression: { totalXp: 275 },
+      zones: { kitchen: createKitchenZone({ cleanliness: 62, organization: 48, supplies: 76, kitchen: 55 }, 118) },
       cosmetics: createDefaultHouseholdCollection(),
       lifecycle: { lastLifecycleDate: today, lastOpenedDate: today, lastMeaningfulActivityDate: today, dailyHistory: [], questHistory: [] },
     },

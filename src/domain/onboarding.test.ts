@@ -7,6 +7,7 @@ describe("household onboarding", () => {
     const state = createOnboardedState({ householdName: "Apartment Quest", players: [alex], priorities: ["kitchen", "cleaning"], starterTemplateIds: suggestedStarterTemplateIds(["kitchen", "cleaning"]) }, new Date(2026, 7, 23, 10));
     expect(state.household).toMatchObject({ id: "household-apartment-quest", name: "Apartment Quest", playerIds: ["player-alex-1"] });
     expect(state.players[alex.id]).toMatchObject({ name: "Alex", coins: 0, progression: { totalXp: 0 } });
+    expect(state.household.zones.kitchen).toMatchObject({ totalXp: 0, condition: { dishes: 50, counters: 50, floor: 50, trash: 50, food: 50 } });
     expect(state.household.questTemplates.length).toBeGreaterThan(0);
   });
 

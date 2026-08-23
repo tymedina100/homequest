@@ -13,6 +13,12 @@ export type RewardMode = "automatic" | "manual";
 export type SkillKey = QuestCategory;
 export type CosmeticType = "theme" | "decoration" | "title" | "accent";
 export type DecorationSlot = "plant" | "light" | "floor" | "wall" | "shelf";
+export type ZoneId = "kitchen";
+export type QuestZoneId = ZoneId | "household";
+export type ZoneType = "kitchen";
+export type KitchenConditionKey = "dishes" | "counters" | "floor" | "trash" | "food";
+export type KitchenCondition = Record<KitchenConditionKey, number>;
+export type ZoneDecorationSlot = "counter" | "wall" | "shelf" | "plant" | "lighting" | "floor";
 export type PlayerId = string;
 export type SkinTone = "porcelain" | "peach" | "golden" | "warm" | "brown" | "deep";
 export type HairStyle = "short" | "waves" | "curls" | "bun" | "mohawk";
@@ -49,6 +55,10 @@ export interface Quest {
   rescueOf?: string;
   lifecycleNote?: string;
   statEffects: Partial<Record<HomeStatKey, number>>;
+  /** Structured room ownership. Household is the safe default for legacy/custom work. */
+  zoneId: QuestZoneId;
+  /** Room-local condition changes, applied only by the completion transaction. */
+  zoneEffects?: Partial<KitchenCondition>;
   createdAt: string;
   lastCompletedAt?: string;
   dueAt?: string;
@@ -70,6 +80,8 @@ export interface QuestTemplate {
   urgency: Urgency;
   escalation: EscalationPolicy;
   statEffects: Partial<Record<HomeStatKey, number>>;
+  zoneId: QuestZoneId;
+  zoneEffects?: Partial<KitchenCondition>;
   preferredDaypart?: Daypart;
   active: boolean;
   createdAt: string;
@@ -159,6 +171,20 @@ export interface HouseholdCosmeticCollection {
   equippedAccentId?: string;
 }
 
+export interface ZoneCosmeticCollection {
+  equippedDecorationIds: Partial<Record<ZoneDecorationSlot, string>>;
+}
+
+export interface ZoneState {
+  id: ZoneId;
+  displayName: string;
+  type: ZoneType;
+  totalXp: number;
+  condition: KitchenCondition;
+  cosmetics: ZoneCosmeticCollection;
+  metadata: { initializedFromSchema: number };
+}
+
 export interface PlayerCosmeticCollection {
   ownedIds: string[];
   equippedTitleId?: string;
@@ -235,12 +261,13 @@ export interface HouseholdState {
   homeStats: HomeStats;
   inventory: InventoryItem[];
   homeProgression: HomeProgression;
+  zones: Record<ZoneId, ZoneState>;
   cosmetics: HouseholdCosmeticCollection;
   lifecycle: DailyLifecycleState;
 }
 
 export interface AppState {
-  schemaVersion: 5;
+  schemaVersion: 6;
   household: HouseholdState;
   players: Record<PlayerId, PlayerState>;
   session: {

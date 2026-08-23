@@ -20,4 +20,19 @@ describe("atomic completion transaction", () => {
     expect(result.state.household.quests.find((quest) => quest.id === rescue.id)?.status).toBe("completed"); expect(result.summary?.coins).toBeGreaterThan(Math.round(rescue.xpReward / 10));
     expect(result.state.players[TYLER_PLAYER_ID].progression).toEqual(state.players[TYLER_PLAYER_ID].progression);
   });
+  it("applies shared Kitchen condition and XP once while isolating personal rewards", () => {
+    const state = createSeedState(); const before = structuredClone(state);
+    const result = completeQuestTransaction(state, "dishwasher", RACHEL_PLAYER_ID, "2026-08-23T10:00:00.000Z");
+    expect(result.summary).toMatchObject({ playerName: "Rachel", kitchenXp: 8, kitchenEffects: { dishes: 20 } });
+    expect(result.state.household.zones.kitchen.condition.dishes).toBeGreaterThan(before.household.zones.kitchen.condition.dishes);
+    expect(result.state.household.zones.kitchen.totalXp).toBe(before.household.zones.kitchen.totalXp + 8);
+    expect(result.state.players[RACHEL_PLAYER_ID].progression.totalXp).toBeGreaterThan(before.players[RACHEL_PLAYER_ID].progression.totalXp);
+    expect(result.state.players[TYLER_PLAYER_ID].progression).toEqual(before.players[TYLER_PLAYER_ID].progression);
+    expect(completeQuestTransaction(result.state, "dishwasher", RACHEL_PLAYER_ID, "2026-08-23T10:01:00.000Z").state.household.zones.kitchen.totalXp).toBe(result.state.household.zones.kitchen.totalXp);
+  });
+  it("does not award Kitchen XP for household/general quests", () => {
+    const state = createSeedState(); const result = completeQuestTransaction(state, "laundry", TYLER_PLAYER_ID, "2026-08-23T10:00:00.000Z");
+    expect(result.summary?.kitchenXp).toBe(0);
+    expect(result.state.household.zones.kitchen).toEqual(state.household.zones.kitchen);
+  });
 });

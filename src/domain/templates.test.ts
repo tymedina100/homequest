@@ -7,7 +7,7 @@ import type { LocalDateKey } from "./types";
 import { TYLER_PLAYER_ID } from "./players";
 
 const localDate = (year: number, month: number, day: number) => new Date(year, month - 1, day, 10);
-const draft = (): QuestTemplateDraft => ({ id: "custom-litter", title: "Refresh litter box", category: "homekeeping", estimatedMinutes: 10, effort: "low", recurrence: { cadence: "weekdays", daysOfWeek: [1, 3, 5] }, urgency: "soon", escalation: "rescue-eligible", statEffects: { cleanliness: 5 }, rewardMode: "automatic" });
+const draft = (): QuestTemplateDraft => ({ id: "custom-litter", title: "Refresh litter box", category: "homekeeping", estimatedMinutes: 10, effort: "low", recurrence: { cadence: "weekdays", daysOfWeek: [1, 3, 5] }, urgency: "soon", escalation: "rescue-eligible", statEffects: { cleanliness: 5 }, zoneId: "household", rewardMode: "automatic" });
 
 describe("quest templates", () => {
   it("creates a user-authored template and one current occurrence", () => {
