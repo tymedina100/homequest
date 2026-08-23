@@ -4,12 +4,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { createSeedState } from "@/data/seed";
 import { completeQuestTransaction, type CompletionSummary } from "@/domain/completion";
 import { initializeDailyLifecycle } from "@/domain/lifecycle";
-import { claimDailyChest as claimDailyChestDomain, initializeDailyChest } from "@/domain/daily-chest";
+import { claimDailyChest as claimDailyChestDomain, initializeAllDailyChests } from "@/domain/daily-chest";
 import { equipCosmetic as equipCosmeticDomain, purchaseCosmetic as purchaseCosmeticDomain } from "@/domain/cosmetics";
 import { toLocalDateKey } from "@/domain/dates";
+import { getActivePlayer, updatePlayer } from "@/domain/players";
 import { createQuestTemplate as createQuestTemplateDomain, hasTemplateHistory, syncTemplateOccurrence } from "@/domain/templates";
 import type { QuestTemplateDraft } from "@/domain/templates";
-import type { AppState, DailyContext, InventoryItem, UserPreferences } from "@/domain/types";
+import type { AppState, AvatarConfig, DailyContext, InventoryItem, PlayerId, PlayerState, UserPreferences } from "@/domain/types";
 import { LocalStoragePersistence } from "@/persistence/store";
 
 export type RewardEvent =
@@ -19,9 +20,12 @@ export type RewardEvent =
 
 interface HomeQuestContextValue {
   state: AppState;
+  activePlayer: PlayerState;
   hydrated: boolean;
   completion: RewardEvent | null;
   completeQuest: (questId: string) => void;
+  switchPlayer: (playerId: PlayerId) => void;
+  updateAvatar: (changes: Partial<AvatarConfig>) => void;
   addInventoryItem: (item: InventoryItem) => void;
   updatePreferences: (preferences: Partial<UserPreferences>) => void;
   updateDailyContext: (context: Pick<DailyContext, "energy" | "availableMinutes">) => void;
@@ -55,7 +59,7 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
       if (!active) return;
       const now = new Date();
       const lifecycle = initializeDailyLifecycle(saved ?? createSeedState(now), now);
-      setState(initializeDailyChest(lifecycle, toLocalDateKey(now)));
+      setState(initializeAllDailyChests(lifecycle, toLocalDateKey(now)));
       setHydrated(true);
     });
     return () => { active = false; };
@@ -67,51 +71,61 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
 
   const completeQuest = useCallback((questId: string) => {
     setState((current) => {
-      const quest = current.quests.find((item) => item.id === questId);
+      const playerId = current.session.activePlayerId;
+      const quest = current.household.quests.find((item) => item.id === questId);
       if (!quest || quest.status === "completed") return current;
-      const result = completeQuestTransaction(current, questId, new Date().toISOString());
+      const result = completeQuestTransaction(current, questId, playerId, new Date().toISOString());
       if (result.applied && result.summary) setCompletion({ kind: "quest", summary: result.summary, id: Date.now() });
       return result.state;
     });
   }, []);
 
   const addInventoryItem = useCallback((item: InventoryItem) => {
-    setState((current) => ({ ...current, inventory: [item, ...current.inventory] }));
+    setState((current) => ({ ...current, household: { ...current.household, inventory: [item, ...current.household.inventory] } }));
   }, []);
 
   const updatePreferences = useCallback((preferences: Partial<UserPreferences>) => {
-    setState((current) => ({ ...current, preferences: { ...current.preferences, ...preferences } }));
+    setState((current) => ({ ...current, session: { ...current.session, preferences: { ...current.session.preferences, ...preferences } } }));
   }, []);
 
   const updateDailyContext = useCallback((context: Pick<DailyContext, "energy" | "availableMinutes">) => {
-    setState((current) => ({ ...current, dailyContext: { ...context, date: toLocalDateKey(new Date()) } }));
+    setState((current) => updatePlayer(current, current.session.activePlayerId, (player) => ({ ...player, dailyContext: { ...context, date: toLocalDateKey(new Date()) } })));
+  }, []);
+
+  const switchPlayer = useCallback((playerId: PlayerId) => {
+    setState((current) => current.players[playerId] ? { ...current, session: { ...current.session, activePlayerId: playerId } } : current);
+    setCompletion(null);
+  }, []);
+
+  const updateAvatar = useCallback((changes: Partial<AvatarConfig>) => {
+    setState((current) => updatePlayer(current, current.session.activePlayerId, (player) => ({ ...player, avatar: { ...player.avatar, ...changes } })));
   }, []);
 
   const createQuestTemplate = useCallback((draft: QuestTemplateDraft) => {
     const now = new Date();
     setState((current) => {
       const template = createQuestTemplateDomain(draft, now);
-      return syncTemplateOccurrence({ ...current, questTemplates: [...current.questTemplates, template] }, template, now);
+      return syncTemplateOccurrence({ ...current, household: { ...current.household, questTemplates: [...current.household.questTemplates, template] } }, template, now);
     });
   }, []);
 
   const updateQuestTemplate = useCallback((templateId: string, changes: Partial<QuestTemplateDraft>) => {
     const now = new Date();
     setState((current) => {
-      const existing = current.questTemplates.find((template) => template.id === templateId);
+      const existing = current.household.questTemplates.find((template) => template.id === templateId);
       if (!existing) return current;
       const template = { ...existing, ...changes, updatedAt: now.toISOString() };
-      return syncTemplateOccurrence({ ...current, questTemplates: current.questTemplates.map((item) => item.id === templateId ? template : item) }, template, now);
+      return syncTemplateOccurrence({ ...current, household: { ...current.household, questTemplates: current.household.questTemplates.map((item) => item.id === templateId ? template : item) } }, template, now);
     });
   }, []);
 
   const setTemplateActive = useCallback((templateId: string, active: boolean) => {
     const now = new Date();
     setState((current) => {
-      const existing = current.questTemplates.find((template) => template.id === templateId);
+      const existing = current.household.questTemplates.find((template) => template.id === templateId);
       if (!existing) return current;
       const template = { ...existing, active, updatedAt: now.toISOString() };
-      return syncTemplateOccurrence({ ...current, questTemplates: current.questTemplates.map((item) => item.id === templateId ? template : item) }, template, now);
+      return syncTemplateOccurrence({ ...current, household: { ...current.household, questTemplates: current.household.questTemplates.map((item) => item.id === templateId ? template : item) } }, template, now);
     });
   }, []);
 
@@ -123,15 +137,18 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
       const preserveHistory = hasTemplateHistory(current, templateId);
       return {
         ...current,
-        questTemplates: current.questTemplates.filter((template) => template.id !== templateId),
-        quests: current.quests.map((quest) => quest.templateId === templateId && quest.status === "available" ? { ...quest, status: "archived" as const } : quest).filter((quest) => preserveHistory || quest.templateId !== templateId),
+        household: {
+          ...current.household,
+          questTemplates: current.household.questTemplates.filter((template) => template.id !== templateId),
+          quests: current.household.quests.map((quest) => quest.templateId === templateId && quest.status === "available" ? { ...quest, status: "archived" as const } : quest).filter((quest) => preserveHistory || quest.templateId !== templateId),
+        },
       };
     });
   }, []);
 
   const purchaseCosmetic = useCallback((itemId: string) => {
     setState((current) => {
-      const result = purchaseCosmeticDomain(current, itemId);
+      const result = purchaseCosmeticDomain(current, itemId, current.session.activePlayerId);
       setCompletion({ kind: "collection", id: Date.now(), title: result.ok ? "Added to collection" : "Not available yet", message: result.ok ? "It’s yours. Equip it whenever it feels right." : result.reason === "coins" ? "A few more coins will do it." : result.reason === "locked" ? "Keep caring for your home to reveal this reward." : "This reward is already in your collection." });
       return result.state;
     });
@@ -139,7 +156,7 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
 
   const equipCosmetic = useCallback((itemId: string) => {
     setState((current) => {
-      const next = equipCosmeticDomain(current, itemId);
+      const next = equipCosmeticDomain(current, itemId, current.session.activePlayerId);
       if (next !== current) setCompletion({ kind: "collection", id: Date.now(), title: "Equipped", message: "Your home has a new little piece of you." });
       return next;
     });
@@ -147,7 +164,7 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
 
   const claimDailyChest = useCallback(() => {
     setState((current) => {
-      const result = claimDailyChestDomain(current, new Date().toISOString());
+      const result = claimDailyChestDomain(current, current.session.activePlayerId, new Date().toISOString());
       if (result.claimed) setCompletion({ kind: "chest", id: Date.now(), title: "Daily Chest opened", message: "+20 coins · +20 XP · +12 Home XP" });
       return result.state;
     });
@@ -161,7 +178,8 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
 
   const dismissCompletion = useCallback(() => setCompletion(null), []);
 
-  const value = useMemo(() => ({ state, hydrated, completion, completeQuest, addInventoryItem, updatePreferences, updateDailyContext, createQuestTemplate, updateQuestTemplate, archiveQuestTemplate, restoreQuestTemplate, deleteQuestTemplate, purchaseCosmetic, equipCosmetic, claimDailyChest, reset, dismissCompletion }), [state, hydrated, completion, completeQuest, addInventoryItem, updatePreferences, updateDailyContext, createQuestTemplate, updateQuestTemplate, archiveQuestTemplate, restoreQuestTemplate, deleteQuestTemplate, purchaseCosmetic, equipCosmetic, claimDailyChest, reset, dismissCompletion]);
+  const activePlayer = getActivePlayer(state);
+  const value = useMemo(() => ({ state, activePlayer, hydrated, completion, completeQuest, switchPlayer, updateAvatar, addInventoryItem, updatePreferences, updateDailyContext, createQuestTemplate, updateQuestTemplate, archiveQuestTemplate, restoreQuestTemplate, deleteQuestTemplate, purchaseCosmetic, equipCosmetic, claimDailyChest, reset, dismissCompletion }), [state, activePlayer, hydrated, completion, completeQuest, switchPlayer, updateAvatar, addInventoryItem, updatePreferences, updateDailyContext, createQuestTemplate, updateQuestTemplate, archiveQuestTemplate, restoreQuestTemplate, deleteQuestTemplate, purchaseCosmetic, equipCosmetic, claimDailyChest, reset, dismissCompletion]);
 
   return <HomeQuestContext.Provider value={value}>{children}</HomeQuestContext.Provider>;
 }

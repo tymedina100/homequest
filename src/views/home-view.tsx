@@ -10,6 +10,7 @@ import { ProgressBar, QuestCard, SectionHeading } from "@/components/ui";
 import { DailyContextControls } from "@/components/daily-context";
 import { getHomeLevelProgress } from "@/domain/home-progression";
 import { DAILY_CHEST_QUESTS } from "@/domain/game-balance";
+import { CharacterAvatar } from "@/components/character-avatar";
 
 const statLabels: Record<HomeStatKey, { label: string; icon: string }> = {
   cleanliness: { label: "Clean", icon: "✦" },
@@ -19,39 +20,40 @@ const statLabels: Record<HomeStatKey, { label: string; icon: string }> = {
 };
 
 export function HomeView({ goToQuests }: { goToQuests: () => void }) {
-  const { state, completeQuest, updateDailyContext, claimDailyChest } = useHomeQuest();
-  const progress = getLevelProgress(state.progression.totalXp);
-  const homeProgress = getHomeLevelProgress(state.homeProgression);
-  const recommendation = recommendQuest(state.quests, state.dailyContext, state.homeStats);
-  const available = state.quests.filter((quest) => quest.status === "available");
+  const { state, activePlayer, completeQuest, updateDailyContext, claimDailyChest } = useHomeQuest();
+  const household = state.household;
+  const progress = getLevelProgress(activePlayer.progression.totalXp);
+  const homeProgress = getHomeLevelProgress(household.homeProgression);
+  const recommendation = recommendQuest(household.quests, activePlayer.dailyContext, household.homeStats);
+  const available = household.quests.filter((quest) => quest.status === "available");
 
   return (
     <div className="view-stack home-view">
       <header className="player-header">
-        <div className="avatar"><span>T</span><i /></div>
-        <div className="player-copy"><p>Welcome home,</p><h1>{state.player.name}</h1></div>
+        <div className="avatar"><CharacterAvatar config={activePlayer.avatar} name={activePlayer.name} size={72} /><i /></div>
+        <div className="player-copy"><p>Welcome home,</p><h1>{activePlayer.name}</h1></div>
         <div className="level-panel">
           <div><span>Level {progress.level}</span><small>{progress.xpIntoLevel} / {progress.xpNeeded} XP</small></div>
           <ProgressBar value={progress.percent} label="Experience toward the next level" />
         </div>
-        <div className="coins"><Coins size={18} /><strong>{state.player.coins}</strong></div>
+        <div className="coins"><Coins size={18} /><strong>{activePlayer.coins}</strong></div>
       </header>
 
-      <DailyContextControls context={state.dailyContext} onChange={updateDailyContext} compact />
+      <DailyContextControls context={activePlayer.dailyContext} onChange={updateDailyContext} compact />
 
-      <section className={`daily-chest panel ${state.dailyChest.status}`} aria-label="Daily Chest">
-        <div className="chest-icon">{state.dailyChest.status === "ready" ? <Gift size={22} /> : state.dailyChest.status === "claimed" ? <Sparkles size={21} /> : <Lock size={18} />}</div>
-        <div><p className="eyebrow">Daily Chest</p><strong>{state.dailyChest.status === "ready" ? "A small reward is ready" : state.dailyChest.status === "claimed" ? "Claimed today" : `${state.dailyChest.qualifyingQuestIds.length} / ${DAILY_CHEST_QUESTS} meaningful quests`}</strong><span>No streak. Just a little thank-you for showing up.</span></div>
-        {state.dailyChest.status === "ready" ? <button className="small-gold-button" onClick={claimDailyChest}>Open chest</button> : <div className="chest-pips" aria-label={`${state.dailyChest.qualifyingQuestIds.length} of ${DAILY_CHEST_QUESTS} quests complete`}>{Array.from({ length: DAILY_CHEST_QUESTS }, (_, index) => <i className={index < state.dailyChest.qualifyingQuestIds.length ? "filled" : ""} key={index} />)}</div>}
+      <section className={`daily-chest panel ${activePlayer.dailyChest.status}`} aria-label={`${activePlayer.name}'s Daily Chest`}>
+        <div className="chest-icon">{activePlayer.dailyChest.status === "ready" ? <Gift size={22} /> : activePlayer.dailyChest.status === "claimed" ? <Sparkles size={21} /> : <Lock size={18} />}</div>
+        <div><p className="eyebrow">{activePlayer.name}&apos;s Daily Chest</p><strong>{activePlayer.dailyChest.status === "ready" ? "A small reward is ready" : activePlayer.dailyChest.status === "claimed" ? "Claimed today" : `${activePlayer.dailyChest.qualifyingQuestIds.length} / ${DAILY_CHEST_QUESTS} meaningful quests`}</strong><span>No streak. Just a little thank-you for showing up.</span></div>
+        {activePlayer.dailyChest.status === "ready" ? <button className="small-gold-button" onClick={claimDailyChest}>Open chest</button> : <div className="chest-pips" aria-label={`${activePlayer.dailyChest.qualifyingQuestIds.length} of ${DAILY_CHEST_QUESTS} quests complete`}>{Array.from({ length: DAILY_CHEST_QUESTS }, (_, index) => <i className={index < activePlayer.dailyChest.qualifyingQuestIds.length ? "filled" : ""} key={index} />)}</div>}
       </section>
 
       <div className="home-grid">
         <section className="home-hero panel">
           <div className="hero-heading"><div><p className="eyebrow">Your sanctuary</p><h2>Home is finding its rhythm.</h2><div className="home-level-line"><Home size={14} /> Home Lv. {homeProgress.level} <span>·</span> {homeProgress.tierName}</div></div><div className="harmony"><Leaf size={16} /> Steady</div></div>
-          <HomeScene stats={state.homeStats} tier={homeProgress.tier} tierName={homeProgress.tierName} cosmetics={state.cosmetics} />
+          <HomeScene stats={household.homeStats} tier={homeProgress.tier} tierName={homeProgress.tierName} cosmetics={household.cosmetics} players={household.playerIds.map((id) => state.players[id]).filter(Boolean)} activePlayerId={activePlayer.id} />
           <div className="home-xp-line"><span>Home progress</span><div className="progress-track" role="progressbar" aria-label="Permanent Home Level progress" aria-valuenow={homeProgress.percent}><i style={{ width: `${homeProgress.percent}%` }} /></div><strong>{homeProgress.xpIntoLevel} / {homeProgress.xpNeeded}</strong></div>
           <div className="home-stats">
-            {(Object.entries(state.homeStats) as [HomeStatKey, number][]).map(([key, value]) => (
+            {(Object.entries(household.homeStats) as [HomeStatKey, number][]).map(([key, value]) => (
               <div className="home-stat" key={key}>
                 <span className="stat-icon">{statLabels[key].icon}</span>
                 <div><p>{statLabels[key].label}</p><ProgressBar value={value} label={`${statLabels[key].label} ${value}%`} /></div>

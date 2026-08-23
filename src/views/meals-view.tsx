@@ -9,7 +9,7 @@ const kindLabels = { easiest: "Easiest tonight", "use-it-up": "Use it up", comfo
 
 export function MealsView() {
   const { state } = useHomeQuest();
-  const suggestions = suggestMeals(recipes, state.inventory);
+  const suggestions = suggestMeals(recipes, state.household.inventory);
   return (
     <div className="view-stack">
       <div className="page-intro"><p className="eyebrow">From your kitchen</p><h1>Dinner, without the spiral.</h1><p>Three useful answers based on what you already have. No endless feed required.</p></div>

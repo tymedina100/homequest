@@ -1,6 +1,6 @@
 import { addDays, dateKeyFromIso, dayOfWeek, daysBetween } from "./dates";
 import { isDueOnDate } from "./recurrence";
-import type { AppState, HomeStatKey, LocalDateKey, Quest, QuestCategory } from "./types";
+import type { AppState, HomeStatKey, LocalDateKey, PlayerId, Quest, QuestCategory } from "./types";
 
 const categoryOrder: QuestCategory[] = ["cleaning", "cooking", "organization", "homekeeping"];
 const statOrder: HomeStatKey[] = ["kitchen", "cleanliness", "organization", "supplies"];
@@ -14,6 +14,7 @@ export interface DailySummary {
   homeImprovements: Partial<Record<HomeStatKey, number>>;
   rescueCount: number;
   comebackCount: number;
+  contributions: Record<PlayerId, number>;
   biggestWin?: Quest;
   momentum?: Quest[];
   tone: "quiet" | "light" | "active";
@@ -30,6 +31,7 @@ export interface WeeklySummary {
   mostReliableQuest?: { title: string; count: number };
   rescueCount: number;
   comebackCount: number;
+  contributions: Record<PlayerId, number>;
   bestDay?: DailySummary;
   homeImprovements: Partial<Record<HomeStatKey, number>>;
   neglectedArea?: string;
@@ -45,7 +47,13 @@ export interface TomorrowPreview {
 }
 
 function completedOn(state: AppState, date: LocalDateKey): Quest[] {
-  return state.quests.filter((quest) => quest.status === "completed" && quest.lastCompletedAt && dateKeyFromIso(quest.lastCompletedAt) === date);
+  return state.household.quests.filter((quest) => quest.status === "completed" && quest.lastCompletedAt && dateKeyFromIso(quest.lastCompletedAt) === date);
+}
+
+function contributions(state: AppState, quests: Quest[]): Record<PlayerId, number> {
+  const result = Object.fromEntries(state.household.playerIds.map((id) => [id, 0])) as Record<PlayerId, number>;
+  for (const quest of quests) if (quest.completedByPlayerId) result[quest.completedByPlayerId] = (result[quest.completedByPlayerId] ?? 0) + 1;
+  return result;
 }
 
 function categoryActivity(quests: Quest[]): Partial<Record<QuestCategory, number>> {
@@ -102,6 +110,7 @@ export function getDailySummary(state: AppState, date: LocalDateKey): DailySumma
     homeImprovements: homeImprovements(completed),
     rescueCount: completed.filter((quest) => quest.kind === "rescue").length,
     comebackCount: completed.filter((quest) => quest.kind === "comeback").length,
+    contributions: contributions(state, completed),
     biggestWin: completedCount ? selectBiggestWin(completed) : undefined,
     momentum: detectMomentumChain(completed),
     tone: completedCount === 0 ? "quiet" : completedCount === 1 ? "light" : "active",
@@ -122,10 +131,10 @@ function strongestCategory(activity: Partial<Record<QuestCategory, number>>): Qu
 }
 
 function findNeglectedArea(state: AppState, end: LocalDateKey): string | undefined {
-  const lowStat = statOrder.filter((stat) => state.homeStats[stat] < 42).sort((left, right) => state.homeStats[left] - state.homeStats[right])[0];
+  const lowStat = statOrder.filter((stat) => state.household.homeStats[stat] < 42).sort((left, right) => state.household.homeStats[left] - state.household.homeStats[right])[0];
   if (lowStat) return `${lowStat === "kitchen" ? "Kitchen" : lowStat[0].toUpperCase() + lowStat.slice(1)} could use a little attention.`;
-  const candidates = state.questTemplates.filter((template) => template.active && template.escalation === "rescue-eligible").map((template) => {
-    const last = state.quests.filter((quest) => quest.templateId === template.id && quest.lastCompletedAt).sort((left, right) => (right.lastCompletedAt ?? "").localeCompare(left.lastCompletedAt ?? ""))[0];
+  const candidates = state.household.questTemplates.filter((template) => template.active && template.escalation === "rescue-eligible").map((template) => {
+    const last = state.household.quests.filter((quest) => quest.templateId === template.id && quest.lastCompletedAt).sort((left, right) => (right.lastCompletedAt ?? "").localeCompare(left.lastCompletedAt ?? ""))[0];
     const lastDate = last?.lastCompletedAt ? dateKeyFromIso(last.lastCompletedAt) : dateKeyFromIso(template.createdAt);
     return { template, unattended: daysBetween(lastDate, end) };
   }).filter((item) => item.unattended >= 6).sort((left, right) => right.unattended - left.unattended || left.template.title.localeCompare(right.template.title));
@@ -153,7 +162,7 @@ export function getWeeklySummary(state: AppState, dateInWeek: LocalDateKey): Wee
   const base = {
     weekStart, weekEnd, completedCount: completed.length, xpEarned: completed.reduce((total, quest) => total + quest.xpReward, 0), activeDays: daily.filter((summary) => summary.completedCount > 0).length,
     categoryActivity: activity, strongestCategory: strongestCategory(activity), mostReliableQuest, rescueCount: completed.filter((quest) => quest.kind === "rescue").length,
-    comebackCount: completed.filter((quest) => quest.kind === "comeback").length, bestDay: [...daily].sort((left, right) => right.xpEarned - left.xpEarned || right.completedCount - left.completedCount || left.date.localeCompare(right.date))[0]?.completedCount ? [...daily].sort((left, right) => right.xpEarned - left.xpEarned || right.completedCount - left.completedCount || left.date.localeCompare(right.date))[0] : undefined,
+    comebackCount: completed.filter((quest) => quest.kind === "comeback").length, contributions: contributions(state, completed), bestDay: [...daily].sort((left, right) => right.xpEarned - left.xpEarned || right.completedCount - left.completedCount || left.date.localeCompare(right.date))[0]?.completedCount ? [...daily].sort((left, right) => right.xpEarned - left.xpEarned || right.completedCount - left.completedCount || left.date.localeCompare(right.date))[0] : undefined,
     homeImprovements: homeImprovements(completed), neglectedArea: findNeglectedArea(state, weekEnd),
   };
   return { ...base, narrative: weeklyNarrative(base) };
@@ -169,9 +178,9 @@ export function formatEstimatedTime(minutes: number): string {
 export function getTomorrowPreview(state: AppState, today: LocalDateKey): TomorrowPreview {
   const date = addDays(today, 1);
   const urgencyRank = { today: 0, soon: 1, gentle: 2 } as const;
-  const statForCategory = (category: Quest["category"]): keyof AppState["homeStats"] =>
+  const statForCategory = (category: Quest["category"]): keyof AppState["household"]["homeStats"] =>
     category === "cooking" ? "kitchen" : category === "organization" ? "organization" : "cleanliness";
-  const quests = state.questTemplates
+  const quests = state.household.questTemplates
     .filter((template) => template.active && isDueOnDate(template, date))
     .map((template) => ({
       id: `${template.id}:${date}`,
@@ -188,9 +197,9 @@ export function getTomorrowPreview(state: AppState, today: LocalDateKey): Tomorr
     .slice(0, 5);
   const focusQuest = [...quests].sort(
     (left, right) =>
-      state.homeStats[statForCategory(left.category)] - state.homeStats[statForCategory(right.category)] ||
+      state.household.homeStats[statForCategory(left.category)] - state.household.homeStats[statForCategory(right.category)] ||
       right.estimatedMinutes - left.estimatedMinutes,
   )[0];
-  const activeRescue = state.quests.find((quest) => quest.kind === "rescue" && quest.status === "available");
+  const activeRescue = state.household.quests.find((quest) => quest.kind === "rescue" && quest.status === "available");
   return { date, quests, estimatedMinutes: quests.reduce((total, quest) => total + quest.estimatedMinutes, 0), focusArea: focusQuest ? (focusQuest.category === "cooking" ? "Kitchen" : focusQuest.category === "organization" ? "Organization" : "Cleanliness") : undefined, notableRisk: activeRescue ? `${activeRescue.title} is already waiting on your board.` : undefined };
 }

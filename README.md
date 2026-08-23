@@ -1,6 +1,6 @@
 # HomeQuest
 
-HomeQuest is a mobile-first cozy home-management RPG. Milestone 0.5 turns useful household work into permanent, non-punitive progression: player XP, Home Levels and visual tiers, four skills with modest perks, achievements, cosmetic themes/decorations, and a once-daily deterministic chest.
+HomeQuest is a mobile-first cozy home-management RPG. Milestone 0.6 adds a shared household for Tyler and Rachel while preserving separate, non-punitive player journeys: XP, skills, achievements, coins, titles, daily context, Daily Chests, and customizable chibi characters.
 
 ## Run locally
 
@@ -31,4 +31,4 @@ npm run build
 
 The app includes an App Router web manifest and install metadata. A production service worker/offline asset strategy is intentionally deferred until the caching policy is defined.
 
-Progression mutations are centralized in `src/domain/completion.ts`. Current home condition remains in `homeStats`; permanent home advancement is stored separately in `homeProgression`. Schema v4 migrates older local saves without clearing them.
+Progression mutations are centralized in `src/domain/completion.ts`. Schema v5 cleanly separates shared `household` state (quests, inventory, home condition/progression, lifecycle, themes, and decorations) from stable-ID `players`. Every completion requires an acting player ID and records attribution in both the occurrence and shared history. The v4→v5 migration assigns existing personal progress and history to Tyler, creates a fresh Rachel profile, and preserves the existing local-storage key without clearing saves.

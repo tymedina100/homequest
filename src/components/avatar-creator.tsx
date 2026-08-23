@@ -1,0 +1,18 @@
+"use client";
+
+import { Palette, Sparkles } from "lucide-react";
+import { AVATAR_OPTIONS } from "@/domain/avatar";
+import type { AvatarConfig } from "@/domain/types";
+import { CharacterAvatar } from "./character-avatar";
+import { useHomeQuest } from "@/state/homequest-context";
+
+const labels: Record<keyof AvatarConfig, string> = { skinTone: "Skin tone", hairStyle: "Hair style", hairColor: "Hair color", outfit: "Outfit", outfitColor: "Outfit color", accessory: "Accessory", expression: "Expression" };
+const pretty = (value: string) => value.replaceAll("-", " ").replace(/^./, (letter) => letter.toUpperCase());
+
+export function AvatarCreator() {
+  const { activePlayer, updateAvatar } = useHomeQuest();
+  return <section className="avatar-studio panel">
+    <div className="avatar-studio-preview"><p className="eyebrow"><Palette size={14} /> Character studio</p><div className="avatar-stage"><CharacterAvatar config={activePlayer.avatar} name={activePlayer.name} size={180} /></div><h2>{activePlayer.name}</h2><p>Your character is personal to this player and saves automatically.</p></div>
+    <div className="avatar-options">{(Object.keys(AVATAR_OPTIONS) as Array<keyof AvatarConfig>).map((key) => <fieldset key={key}><legend>{labels[key]}</legend><div>{AVATAR_OPTIONS[key].map((option) => { const selected = activePlayer.avatar[key] === option; return <button type="button" className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => updateAvatar({ [key]: option })} key={option}>{selected && <Sparkles size={12} />}{pretty(option)}</button>; })}</div></fieldset>)}</div>
+  </section>;
+}

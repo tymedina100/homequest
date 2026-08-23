@@ -17,7 +17,7 @@ export function InventoryView() {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const items = useMemo(() => state.inventory.filter((item) => item.storageLocation === location && item.name.toLowerCase().includes(query.toLowerCase())), [state.inventory, location, query]);
+  const items = useMemo(() => state.household.inventory.filter((item) => item.storageLocation === location && item.name.toLowerCase().includes(query.toLowerCase())), [state.household.inventory, location, query]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,7 +32,7 @@ export function InventoryView() {
     <div className="view-stack">
       <div className="page-intro inventory-intro"><div><p className="eyebrow">Your provisions</p><h1>Everything in its place.</h1><p>A quick view of what’s home—without turning groceries into homework.</p></div><button className="primary-button" onClick={() => setAdding(true)}><Plus size={18} /> Add item</button></div>
       <div className="inventory-toolbar">
-        <div className="inventory-tabs" role="tablist">{locations.map((item) => <button role="tab" aria-selected={location === item.id} className={location === item.id ? "active" : ""} key={item.id} onClick={() => setLocation(item.id)}>{item.icon}{item.label}<span>{state.inventory.filter((entry) => entry.storageLocation === item.id).length}</span></button>)}</div>
+        <div className="inventory-tabs" role="tablist">{locations.map((item) => <button role="tab" aria-selected={location === item.id} className={location === item.id ? "active" : ""} key={item.id} onClick={() => setLocation(item.id)}>{item.icon}{item.label}<span>{state.household.inventory.filter((entry) => entry.storageLocation === item.id).length}</span></button>)}</div>
         <label className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find an item" /></label>
       </div>
       <div className="inventory-grid">

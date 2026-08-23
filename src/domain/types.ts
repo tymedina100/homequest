@@ -13,6 +13,14 @@ export type RewardMode = "automatic" | "manual";
 export type SkillKey = QuestCategory;
 export type CosmeticType = "theme" | "decoration" | "title" | "accent";
 export type DecorationSlot = "plant" | "light" | "floor" | "wall" | "shelf";
+export type PlayerId = string;
+export type SkinTone = "porcelain" | "peach" | "golden" | "warm" | "brown" | "deep";
+export type HairStyle = "short" | "waves" | "curls" | "bun" | "mohawk";
+export type HairColor = "espresso" | "chestnut" | "copper" | "golden" | "midnight" | "rose";
+export type OutfitStyle = "tee" | "sweater" | "overalls" | "apron" | "hoodie";
+export type OutfitColor = "moss" | "amber" | "berry" | "ocean" | "plum" | "cream";
+export type AvatarAccessory = "none" | "glasses" | "earrings" | "headband" | "cap";
+export type AvatarExpression = "content" | "bright" | "focused" | "sleepy";
 
 export interface QuestRecurrence {
   cadence: "daily" | "weekly" | "weekdays" | "interval" | "manual" | "as-needed";
@@ -47,6 +55,8 @@ export interface Quest {
   dependsOn?: string[];
   recommendation?: { ignoredDays?: number; momentum?: number };
   comebackEligible?: boolean;
+  /** The stable player ID responsible for this completed occurrence. */
+  completedByPlayerId?: PlayerId;
 }
 
 export interface QuestTemplate {
@@ -142,12 +152,21 @@ export interface AchievementState {
   unlockedAt?: string;
 }
 
-export interface CosmeticCollection {
+export interface HouseholdCosmeticCollection {
   ownedIds: string[];
   equippedThemeId: string;
   equippedDecorationIds: Partial<Record<DecorationSlot, string>>;
-  equippedTitleId?: string;
   equippedAccentId?: string;
+}
+
+export interface PlayerCosmeticCollection {
+  ownedIds: string[];
+  equippedTitleId?: string;
+}
+
+/** @deprecated Schema v4 only. Retained for lossless local-save migration. */
+export interface CosmeticCollection extends HouseholdCosmeticCollection {
+  equippedTitleId?: string;
 }
 
 export interface DailyChestState {
@@ -158,8 +177,6 @@ export interface DailyChestState {
 }
 
 export interface UserPreferences {
-  energy: EffortLevel;
-  availableMinutes: number;
   reducedMotion: boolean;
 }
 
@@ -174,6 +191,7 @@ export interface QuestHistoryEntry {
   templateId?: string;
   date: LocalDateKey;
   event: "completed" | "missed" | "rescue-created" | "comeback-created";
+  playerId?: PlayerId;
 }
 
 export interface DailyLifecycleState {
@@ -184,20 +202,49 @@ export interface DailyLifecycleState {
   questHistory: QuestHistoryEntry[];
 }
 
-export interface AppState {
-  schemaVersion: 4;
-  player: { name: string; coins: number };
+export interface AvatarConfig {
+  skinTone: SkinTone;
+  hairStyle: HairStyle;
+  hairColor: HairColor;
+  outfit: OutfitStyle;
+  outfitColor: OutfitColor;
+  accessory: AvatarAccessory;
+  expression: AvatarExpression;
+}
+
+export interface PlayerState {
+  id: PlayerId;
+  name: string;
+  createdAt: string;
+  coins: number;
+  progression: Progression;
+  skills: SkillProgression;
+  achievements: AchievementState[];
+  cosmetics: PlayerCosmeticCollection;
+  avatar: AvatarConfig;
+  dailyContext: DailyContext;
+  dailyChest: DailyChestState;
+}
+
+export interface HouseholdState {
+  id: string;
+  name: string;
+  playerIds: PlayerId[];
   quests: Quest[];
   questTemplates: QuestTemplate[];
   homeStats: HomeStats;
   inventory: InventoryItem[];
-  progression: Progression;
   homeProgression: HomeProgression;
-  skills: SkillProgression;
-  achievements: AchievementState[];
-  cosmetics: CosmeticCollection;
-  dailyChest: DailyChestState;
-  preferences: UserPreferences;
-  dailyContext: DailyContext;
+  cosmetics: HouseholdCosmeticCollection;
   lifecycle: DailyLifecycleState;
+}
+
+export interface AppState {
+  schemaVersion: 5;
+  household: HouseholdState;
+  players: Record<PlayerId, PlayerState>;
+  session: {
+    activePlayerId: PlayerId;
+    preferences: UserPreferences;
+  };
 }

@@ -4,13 +4,14 @@ import { recordDailyChestQuest } from "./daily-chest";
 import { COMEBACK_COIN_BONUS, HOME_LEVEL_COIN_BONUS, HOME_XP_BASE, PLAYER_LEVEL_COIN_BONUS, RESCUE_COIN_BONUS } from "./game-balance";
 import { getHomeLevelProgress } from "./home-progression";
 import { recordQuestCompletion } from "./lifecycle";
+import { updatePlayer } from "./players";
 import { awardQuestXp, getLevelProgress } from "./progression";
 import { applyHomeStatEffects } from "./home-state";
 import { calculateSkillXp, categoryToSkill, getSkillLevelProgress, perksForLevel } from "./skills";
-import type { AppState, Quest, SkillKey } from "./types";
+import type { AppState, PlayerId, Quest, SkillKey } from "./types";
 
 export interface CompletionSummary {
-  questTitle: string; playerXp: number; skill: SkillKey; skillXp: number; homeXp: number; coins: number;
+  playerName: string; questTitle: string; playerXp: number; skill: SkillKey; skillXp: number; homeXp: number; coins: number;
   playerLevel?: number; skillLevel?: number; homeLevel?: number; homeTier?: string;
   perkIds: string[]; achievementIds: string[]; cosmeticIds: string[]; chestUnlocked: boolean;
 }
@@ -23,19 +24,31 @@ export function calculateHomeXp(quest: Quest): number {
   return HOME_XP_BASE + effort + time + kind;
 }
 
-export function completeQuestTransaction(state: AppState, questId: string, completedAt: string): CompletionResult {
-  const quest = state.quests.find((item) => item.id === questId);
-  if (!quest || quest.status === "completed" || quest.status === "archived") return { state, applied: false };
-  const skill = categoryToSkill(quest.category); const oldPlayerLevel = getLevelProgress(state.progression.totalXp).level; const oldSkillLevel = getSkillLevelProgress(state.skills[skill]).level; const oldHome = getHomeLevelProgress(state.homeProgression);
-  const skillXp = calculateSkillXp(state, quest, completedAt); const homeXp = calculateHomeXp(quest);
+/** Applies shared-home and acting-player rewards as one immutable transaction. */
+export function completeQuestTransaction(state: AppState, questId: string, playerId: PlayerId, completedAt: string): CompletionResult {
+  const quest = state.household.quests.find((item) => item.id === questId); const player = state.players[playerId];
+  if (!player || !state.household.playerIds.includes(playerId) || !quest || quest.status === "completed" || quest.status === "archived") return { state, applied: false };
+  const skill = categoryToSkill(quest.category); const oldPlayerLevel = getLevelProgress(player.progression.totalXp).level; const oldSkillLevel = getSkillLevelProgress(player.skills[skill]).level; const oldHome = getHomeLevelProgress(state.household.homeProgression);
+  const skillXp = calculateSkillXp(state, playerId, quest, completedAt); const homeXp = calculateHomeXp(quest);
   const baseCoins = Math.max(1, Math.round(quest.xpReward / 10)) + (quest.kind === "rescue" ? RESCUE_COIN_BONUS : quest.kind === "comeback" ? COMEBACK_COIN_BONUS : 0) + (quest.kind === "rescue" && skill === "cleaning" && oldSkillLevel >= 6 ? 3 : 0) + (quest.kind === "comeback" && oldSkillLevel >= 4 ? 3 : 0);
-  const newSkillXp = state.skills[skill].totalXp + skillXp; const newSkillLevel = getSkillLevelProgress(newSkillXp).level; const perkIds = perksForLevel(skill, newSkillLevel); const newlyUnlockedPerks = perkIds.filter((id) => !state.skills[skill].unlockedPerkIds.includes(id));
-  let next: AppState = { ...state, player: { ...state.player, coins: state.player.coins + baseCoins }, quests: state.quests.map((item) => item.id === questId ? { ...item, status: "completed" as const, lastCompletedAt: completedAt, missedCount: 0 } : quest.kind === "rescue" && item.templateId === quest.rescueOf ? { ...item, missedCount: 0, lastCompletedAt: completedAt } : item), homeStats: applyHomeStatEffects(state.homeStats, quest.statEffects), progression: awardQuestXp(state.progression, quest), homeProgression: { totalXp: state.homeProgression.totalXp + homeXp }, skills: { ...state.skills, [skill]: { totalXp: newSkillXp, completedQuestCount: state.skills[skill].completedQuestCount + 1, unlockedPerkIds: perkIds } } };
-  next = recordQuestCompletion(next, quest, completedAt);
-  const chest = recordDailyChestQuest(next, quest, dateKeyFromIso(completedAt)); next = chest.state;
-  const achievements = evaluateAchievements(next, completedAt); next = achievements.state;
-  const playerLevel = getLevelProgress(next.progression.totalXp).level; const home = getHomeLevelProgress(next.homeProgression);
+  const newSkillXp = player.skills[skill].totalXp + skillXp; const newSkillLevel = getSkillLevelProgress(newSkillXp).level; const perkIds = perksForLevel(skill, newSkillLevel); const newlyUnlockedPerks = perkIds.filter((id) => !player.skills[skill].unlockedPerkIds.includes(id));
+  let next = updatePlayer(state, playerId, (current) => ({
+    ...current,
+    coins: current.coins + baseCoins,
+    progression: awardQuestXp(current.progression, quest),
+    skills: { ...current.skills, [skill]: { totalXp: newSkillXp, completedQuestCount: current.skills[skill].completedQuestCount + 1, unlockedPerkIds: perkIds } },
+  }));
+  next = { ...next, household: {
+    ...next.household,
+    quests: next.household.quests.map((item) => item.id === questId ? { ...item, status: "completed" as const, lastCompletedAt: completedAt, completedByPlayerId: playerId, missedCount: 0 } : quest.kind === "rescue" && item.templateId === quest.rescueOf ? { ...item, missedCount: 0, lastCompletedAt: completedAt } : item),
+    homeStats: applyHomeStatEffects(next.household.homeStats, quest.statEffects),
+    homeProgression: { totalXp: next.household.homeProgression.totalXp + homeXp },
+  } };
+  next = recordQuestCompletion(next, quest, playerId, completedAt);
+  const chest = recordDailyChestQuest(next, playerId, quest, dateKeyFromIso(completedAt)); next = chest.state;
+  const achievements = evaluateAchievements(next, playerId, completedAt); next = achievements.state;
+  const finalPlayer = next.players[playerId]; const playerLevel = getLevelProgress(finalPlayer.progression.totalXp).level; const home = getHomeLevelProgress(next.household.homeProgression);
   const levelCoins = Math.max(0, playerLevel - oldPlayerLevel) * PLAYER_LEVEL_COIN_BONUS + Math.max(0, home.level - oldHome.level) * HOME_LEVEL_COIN_BONUS;
-  if (levelCoins) next = { ...next, player: { ...next.player, coins: next.player.coins + levelCoins } };
-  return { state: next, applied: true, summary: { questTitle: quest.title, playerXp: quest.xpReward, skill, skillXp, homeXp: homeXp + achievements.homeXp, coins: baseCoins + achievements.coins + levelCoins, playerLevel: playerLevel > oldPlayerLevel ? playerLevel : undefined, skillLevel: newSkillLevel > oldSkillLevel ? newSkillLevel : undefined, homeLevel: home.level > oldHome.level ? home.level : undefined, homeTier: home.tier > oldHome.tier ? home.tierName : undefined, perkIds: newlyUnlockedPerks, achievementIds: achievements.unlockedIds, cosmeticIds: achievements.cosmeticIds, chestUnlocked: chest.unlocked } };
+  if (levelCoins) next = updatePlayer(next, playerId, (current) => ({ ...current, coins: current.coins + levelCoins }));
+  return { state: next, applied: true, summary: { playerName: player.name, questTitle: quest.title, playerXp: quest.xpReward, skill, skillXp, homeXp: homeXp + achievements.homeXp, coins: baseCoins + achievements.coins + levelCoins, playerLevel: playerLevel > oldPlayerLevel ? playerLevel : undefined, skillLevel: newSkillLevel > oldSkillLevel ? newSkillLevel : undefined, homeLevel: home.level > oldHome.level ? home.level : undefined, homeTier: home.tier > oldHome.tier ? home.tierName : undefined, perkIds: newlyUnlockedPerks, achievementIds: achievements.unlockedIds, cosmeticIds: achievements.cosmeticIds, chestUnlocked: chest.unlocked } };
 }

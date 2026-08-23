@@ -10,8 +10,8 @@ describe("permanent Home progression", () => {
     expect(getHomeLevelProgress(300)).toMatchObject({ level: 3, tier: 2, tierName: "Settled In" });
   });
   it("is independent from fluctuating home state", () => {
-    const state = createSeedState(); const before = getHomeLevelProgress(state.homeProgression);
-    state.homeStats = { cleanliness: 1, organization: 2, supplies: 3, kitchen: 4 };
-    expect(getHomeLevelProgress(state.homeProgression)).toEqual(before);
+    const state = createSeedState(); const before = getHomeLevelProgress(state.household.homeProgression);
+    state.household.homeStats = { cleanliness: 1, organization: 2, supplies: 3, kitchen: 4 };
+    expect(getHomeLevelProgress(state.household.homeProgression)).toEqual(before);
   });
 });

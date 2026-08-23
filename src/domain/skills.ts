@@ -1,5 +1,5 @@
 import { SKILL_XP_MAX, SKILL_XP_MIN } from "./game-balance";
-import type { AppState, Quest, QuestCategory, SkillKey, SkillProgress } from "./types";
+import type { AppState, PlayerId, Quest, QuestCategory, SkillKey, SkillProgress } from "./types";
 
 export interface SkillPerk { id: string; skill: SkillKey; level: number; title: string; description: string }
 
@@ -35,21 +35,23 @@ export function getSkillLevelProgress(input: SkillProgress | number) {
   return { level, totalXp, xpIntoLevel: totalXp - start, xpNeeded: next - start, percent: Math.round(((totalXp - start) / (next - start)) * 100) };
 }
 
-function hasRecentRelatedCompletion(state: AppState, quest: Quest, at: string): boolean {
+function hasRecentRelatedCompletion(state: AppState, playerId: PlayerId, quest: Quest, at: string): boolean {
   const time = new Date(at).getTime();
-  return state.quests.some((item) => item.status === "completed" && item.category === quest.category && item.lastCompletedAt && time - new Date(item.lastCompletedAt).getTime() >= 0 && time - new Date(item.lastCompletedAt).getTime() <= 90 * 60_000);
+  return state.household.quests.some((item) => item.status === "completed" && item.completedByPlayerId === playerId && item.category === quest.category && item.lastCompletedAt && time - new Date(item.lastCompletedAt).getTime() >= 0 && time - new Date(item.lastCompletedAt).getTime() <= 90 * 60_000);
 }
 
-export function calculateSkillXp(state: AppState, quest: Quest, completedAt: string): number {
+export function calculateSkillXp(state: AppState, playerId: PlayerId, quest: Quest, completedAt: string): number {
   const skill = categoryToSkill(quest.category);
-  const level = getSkillLevelProgress(state.skills[skill]).level;
+  const player = state.players[playerId];
+  if (!player) return 0;
+  const level = getSkillLevelProgress(player.skills[skill]).level;
   const timeFactor = quest.estimatedMinutes < 5 ? 0.55 : quest.estimatedMinutes < 10 ? 0.82 : 1;
   const effortFactor = quest.effort === "high" ? 1.25 : quest.effort === "medium" ? 1.1 : 1;
   const kindFactor = quest.kind === "rescue" ? 1.15 : quest.kind === "comeback" ? 1.1 : 1;
   let xp = Math.round(quest.xpReward * 0.55 * timeFactor * effortFactor * kindFactor);
   if (skill === "cleaning" && level >= 2 && quest.estimatedMinutes < 10) xp += 2;
-  if ((skill === "cleaning" || skill === "organization") && level >= 4 && hasRecentRelatedCompletion(state, quest, completedAt)) xp += 3;
-  if (skill === "cooking" && level >= 2 && state.inventory.some((item) => item.useSoon)) xp += 2;
+  if ((skill === "cleaning" || skill === "organization") && level >= 4 && hasRecentRelatedCompletion(state, playerId, quest, completedAt)) xp += 3;
+  if (skill === "cooking" && level >= 2 && state.household.inventory.some((item) => item.useSoon)) xp += 2;
   if (skill === "cooking" && level >= 6 && quest.estimatedMinutes >= 20) xp += 3;
   if (skill === "organization" && level >= 2 && quest.estimatedMinutes >= 15) xp += 2;
   if (skill === "homekeeping" && level >= 2 && quest.recurrence && !["manual", "as-needed"].includes(quest.recurrence.cadence)) xp += 2;

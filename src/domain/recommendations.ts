@@ -1,9 +1,9 @@
-import type { DailyContext, DailyEnergy, EffortLevel, HomeStats, Quest, Urgency, UserPreferences } from "./types";
+import type { DailyContext, DailyEnergy, EffortLevel, HomeStats, Quest, Urgency } from "./types";
 
 const urgencyScore: Record<Urgency, number> = { gentle: 4, soon: 14, today: 26 };
 const effortValue: Record<EffortLevel, number> = { low: 1, medium: 2, high: 3 };
 const dailyEnergyValue: Record<DailyEnergy, number> = { drained: 0, low: 1, good: 2, "locked-in": 3 };
-type RecommendationContext = Pick<DailyContext, "energy" | "availableMinutes"> | Pick<UserPreferences, "energy" | "availableMinutes">;
+type RecommendationContext = Pick<DailyContext, "energy" | "availableMinutes">;
 
 export interface QuestRecommendation {
   quest: Quest;
@@ -12,7 +12,7 @@ export interface QuestRecommendation {
 }
 
 function capacityFor(energy: RecommendationContext["energy"]): number {
-  return energy in dailyEnergyValue ? dailyEnergyValue[energy as DailyEnergy] : effortValue[energy as EffortLevel];
+  return dailyEnergyValue[energy];
 }
 
 export function scoreQuest(quest: Quest, context: RecommendationContext, homeStats?: HomeStats): number {

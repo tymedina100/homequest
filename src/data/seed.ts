@@ -1,6 +1,8 @@
-import type { AppState, Quest, QuestTemplate, Recipe } from "@/domain/types";
+import type { AppState, PlayerState, Progression, Quest, QuestTemplate, Recipe, SkillProgression } from "@/domain/types";
 import { toLocalDateKey } from "@/domain/dates";
-import { createDefaultCollection } from "@/domain/cosmetics";
+import { createDefaultHouseholdCollection } from "@/domain/cosmetics";
+import { defaultAvatarFor } from "@/domain/avatar";
+import { HOUSEHOLD_ID, RACHEL_PLAYER_ID, TYLER_PLAYER_ID } from "@/domain/players";
 
 const createdAt = "2026-08-22T08:00:00.000Z";
 
@@ -39,15 +41,42 @@ export const recipes: Recipe[] = [
   { id: "rice-bowl", name: "Cozy egg rice bowl", description: "Warm rice, a jammy egg, greens, and savory sauce.", prepMinutes: 18, ingredients: ["rice", "eggs", "spinach", "soy sauce"], tags: ["comfort", "flexible"], favorite: true },
 ];
 
+const emptyProgression = (): Progression => ({
+  totalXp: 0,
+  completedQuestCount: 0,
+  categoryStats: {
+    cooking: { xp: 0, completed: 0 }, cleaning: { xp: 0, completed: 0 },
+    organization: { xp: 0, completed: 0 }, homekeeping: { xp: 0, completed: 0 },
+  },
+});
+
+const emptySkills = (): SkillProgression => ({
+  cleaning: { totalXp: 0, completedQuestCount: 0, unlockedPerkIds: [] },
+  cooking: { totalXp: 0, completedQuestCount: 0, unlockedPerkIds: [] },
+  organization: { totalXp: 0, completedQuestCount: 0, unlockedPerkIds: [] },
+  homekeeping: { totalXp: 0, completedQuestCount: 0, unlockedPerkIds: [] },
+});
+
+function createRachel(today: ReturnType<typeof toLocalDateKey>): PlayerState {
+  return {
+    id: RACHEL_PLAYER_ID, name: "Rachel", createdAt, coins: 0,
+    progression: emptyProgression(), skills: emptySkills(), achievements: [],
+    cosmetics: { ownedIds: [] }, avatar: defaultAvatarFor(RACHEL_PLAYER_ID),
+    dailyContext: { date: today, energy: "good", availableMinutes: 15 },
+    dailyChest: { date: today, qualifyingQuestIds: [], status: "locked" },
+  };
+}
+
 export function createSeedState(now = new Date()): AppState {
   const today = toLocalDateKey(now);
   return {
-    schemaVersion: 4,
-    player: { name: "Tyler", coins: 84 },
-    quests: seedQuests.map((quest) => ({ ...quest, occurrenceDate: today })),
-    questTemplates: seedQuestTemplates.map((template) => ({ ...template })),
-    homeStats: { cleanliness: 62, organization: 48, supplies: 76, kitchen: 55 },
-    inventory: [
+    schemaVersion: 5,
+    household: {
+      id: HOUSEHOLD_ID, name: "Tyler & Rachel's Home", playerIds: [TYLER_PLAYER_ID, RACHEL_PLAYER_ID],
+      quests: seedQuests.map((quest) => ({ ...quest, occurrenceDate: today })),
+      questTemplates: seedQuestTemplates.map((template) => ({ ...template })),
+      homeStats: { cleanliness: 62, organization: 48, supplies: 76, kitchen: 55 },
+      inventory: [
       { id: "spinach", name: "Baby spinach", category: "produce", quantity: 0.5, unit: "bag", storageLocation: "fridge", expiresAt: "2026-08-24", useSoon: true, ingredientTags: ["spinach", "greens"] },
       { id: "eggs", name: "Eggs", category: "dairy", quantity: 8, unit: "eggs", storageLocation: "fridge", lowStockThreshold: 4, ingredientTags: ["egg", "eggs"] },
       { id: "cheddar", name: "Sharp cheddar", category: "dairy", quantity: 1, unit: "block", storageLocation: "fridge", ingredientTags: ["cheddar", "cheese"] },
@@ -59,29 +88,35 @@ export function createSeedState(now = new Date()): AppState {
       { id: "rice", name: "Jasmine rice", category: "grains", quantity: 2, unit: "lb", storageLocation: "pantry", ingredientTags: ["rice"] },
       { id: "tortilla", name: "Flour tortillas", category: "bread", quantity: 6, unit: "tortillas", storageLocation: "pantry", ingredientTags: ["tortillas"] },
       { id: "soy", name: "Soy sauce", category: "condiment", quantity: 1, unit: "bottle", storageLocation: "pantry", ingredientTags: ["soy sauce"] },
-    ],
-    progression: {
-      totalXp: 275,
-      completedQuestCount: 9,
-      categoryStats: {
-        cooking: { xp: 80, completed: 2 },
-        cleaning: { xp: 100, completed: 3 },
-        organization: { xp: 55, completed: 2 },
-        homekeeping: { xp: 40, completed: 2 },
+      ],
+      homeProgression: { totalXp: 275 },
+      cosmetics: createDefaultHouseholdCollection(),
+      lifecycle: { lastLifecycleDate: today, lastOpenedDate: today, lastMeaningfulActivityDate: today, dailyHistory: [], questHistory: [] },
+    },
+    players: {
+      [TYLER_PLAYER_ID]: {
+        id: TYLER_PLAYER_ID, name: "Tyler", createdAt, coins: 84,
+        progression: {
+          totalXp: 275, completedQuestCount: 9,
+          categoryStats: {
+            cooking: { xp: 80, completed: 2 }, cleaning: { xp: 100, completed: 3 },
+            organization: { xp: 55, completed: 2 }, homekeeping: { xp: 40, completed: 2 },
+          },
+        },
+        skills: {
+          cleaning: { totalXp: 100, completedQuestCount: 3, unlockedPerkIds: ["cleaning-quick-hands"] },
+          cooking: { totalXp: 80, completedQuestCount: 2, unlockedPerkIds: ["cooking-pantry-sense"] },
+          organization: { totalXp: 55, completedQuestCount: 2, unlockedPerkIds: [] },
+          homekeeping: { totalXp: 40, completedQuestCount: 2, unlockedPerkIds: [] },
+        },
+        achievements: [{ id: "first-step", unlockedAt: createdAt }],
+        cosmetics: { ownedIds: ["title-little-things"], equippedTitleId: "title-little-things" },
+        avatar: defaultAvatarFor(TYLER_PLAYER_ID),
+        dailyContext: { date: today, energy: "good", availableMinutes: 15 },
+        dailyChest: { date: today, qualifyingQuestIds: [], status: "locked" },
       },
+      [RACHEL_PLAYER_ID]: createRachel(today),
     },
-    homeProgression: { totalXp: 275 },
-    skills: {
-      cleaning: { totalXp: 100, completedQuestCount: 3, unlockedPerkIds: ["cleaning-quick-hands"] },
-      cooking: { totalXp: 80, completedQuestCount: 2, unlockedPerkIds: ["cooking-pantry-sense"] },
-      organization: { totalXp: 55, completedQuestCount: 2, unlockedPerkIds: [] },
-      homekeeping: { totalXp: 40, completedQuestCount: 2, unlockedPerkIds: [] },
-    },
-    achievements: [{ id: "first-step", unlockedAt: createdAt }],
-    cosmetics: { ...createDefaultCollection(), ownedIds: ["night-hearth", "title-little-things"], equippedTitleId: "title-little-things" },
-    dailyChest: { date: today, qualifyingQuestIds: [], status: "locked" },
-    preferences: { energy: "medium", availableMinutes: 20, reducedMotion: false },
-    dailyContext: { date: today, energy: "good", availableMinutes: 15 },
-    lifecycle: { lastLifecycleDate: today, lastOpenedDate: today, lastMeaningfulActivityDate: today, dailyHistory: [], questHistory: [] },
+    session: { activePlayerId: TYLER_PLAYER_ID, preferences: { reducedMotion: false } },
   };
 }

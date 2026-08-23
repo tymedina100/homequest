@@ -64,19 +64,19 @@ function canAppearToday(template: QuestTemplate, today: LocalDateKey): boolean {
 export function syncTemplateOccurrence(state: AppState, template: QuestTemplate, now: Date): AppState {
   const today = toLocalDateKey(now);
   const shouldAppear = template.active && canAppearToday(template, today);
-  const current = state.quests.find((quest) => quest.templateId === template.id && quest.occurrenceDate === today && quest.kind !== "rescue" && quest.status !== "archived");
-  let quests = state.quests.map((quest) => {
+  const current = state.household.quests.find((quest) => quest.templateId === template.id && quest.occurrenceDate === today && quest.kind !== "rescue" && quest.status !== "archived");
+  let quests = state.household.quests.map((quest) => {
     if (quest.templateId !== template.id || quest.kind === "rescue" || quest.status !== "available") return quest;
     if (!template.active || (quest.occurrenceDate === today && !shouldAppear)) return { ...quest, status: "archived" as const };
     if (quest.occurrenceDate === today) return { ...createQuestOccurrence(template, today, quest.missedCount ?? 0), id: quest.id };
     return quest;
   });
   if (shouldAppear && !current) quests = [...quests, createQuestOccurrence(template, today)];
-  return { ...state, quests };
+  return { ...state, household: { ...state.household, quests } };
 }
 
 export function hasTemplateHistory(state: AppState, templateId: string): boolean {
-  return state.lifecycle.questHistory.some((entry) => entry.templateId === templateId) || state.quests.some((quest) => quest.templateId === templateId && quest.status !== "available");
+  return state.household.lifecycle.questHistory.some((entry) => entry.templateId === templateId) || state.household.quests.some((quest) => quest.templateId === templateId && quest.status !== "available");
 }
 
 export function withTemplateEscalation(template: QuestTemplate, escalation: EscalationPolicy): QuestTemplate {

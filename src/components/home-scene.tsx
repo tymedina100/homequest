@@ -1,7 +1,8 @@
 import { Armchair, BookOpen, Flower2, LampDesk, Map, Sparkles, Trophy } from "lucide-react";
-import type { CosmeticCollection, HomeStats } from "@/domain/types";
+import type { HouseholdCosmeticCollection, HomeStats, PlayerState } from "@/domain/types";
+import { CharacterAvatar } from "./character-avatar";
 
-export function HomeScene({ stats, tier, tierName, cosmetics }: { stats: HomeStats; tier: number; tierName: string; cosmetics: CosmeticCollection }) {
+export function HomeScene({ stats, tier, tierName, cosmetics, players, activePlayerId }: { stats: HomeStats; tier: number; tierName: string; cosmetics: HouseholdCosmeticCollection; players: PlayerState[]; activePlayerId: string }) {
   const glow = Math.round((stats.cleanliness + stats.organization + stats.kitchen) / 3);
   const equipped = new Set(Object.values(cosmetics.equippedDecorationIds));
   const showLamp = tier >= 2 || equipped.has("warm-floor-lamp");
@@ -20,6 +21,7 @@ export function HomeScene({ stats, tier, tierName, cosmetics }: { stats: HomeSta
       {showPlant && <div className={`scene-plant ${equipped.has("herb-garden") ? "is-herbs" : ""}`}><Flower2 size={54} strokeWidth={1.35} /></div>}
       {showRug && <div className={`scene-rug ${equipped.has("cozy-rug") ? "is-equipped" : ""}`} />}
       {showShelf && <div className="scene-trophy-shelf"><Trophy size={17} /><span /><span /></div>}
+      <div className="scene-characters" aria-label="Household characters">{players.map((player) => <div className={player.id === activePlayerId ? "active" : ""} key={player.id}><CharacterAvatar config={player.avatar} name={player.name} size={72} /><span>{player.name}</span></div>)}</div>
       <div className="scene-clutter"><i /><i /><i /></div>
       <div className="scene-floor" />
       <div className="scene-glow" style={{ opacity: 0.25 + glow / 180 }} />

@@ -1,7 +1,7 @@
 import { addDays, dateKeyFromIso, daysBetween, toLocalDateKey } from "./dates";
 import { isDueOnDate, isRecurring } from "./recurrence";
 import { createQuestOccurrence } from "./templates";
-import type { AppState, DailyHistoryEntry, LocalDateKey, Quest, QuestTemplate } from "./types";
+import type { AppState, DailyHistoryEntry, LocalDateKey, PlayerId, Quest, QuestTemplate } from "./types";
 
 export { isDueOnDate } from "./recurrence";
 
@@ -82,21 +82,22 @@ function createComebackQuest(date: LocalDateKey): Quest {
  */
 export function initializeDailyLifecycle(state: AppState, now: Date): AppState {
   const today = toLocalDateKey(now);
-  const lifecycle = state.lifecycle;
+  const lifecycle = state.household.lifecycle;
   const lastDate = lifecycle.lastLifecycleDate;
+  const players = Object.fromEntries(Object.entries(state.players).map(([id, player]) => [id, { ...player, dailyContext: { ...player.dailyContext, date: today } }])) as AppState["players"];
 
   if (!lastDate) {
-    return { ...state, lifecycle: { ...lifecycle, lastLifecycleDate: today, lastOpenedDate: today }, dailyContext: { ...state.dailyContext, date: today } };
+    return { ...state, players, household: { ...state.household, lifecycle: { ...lifecycle, lastLifecycleDate: today, lastOpenedDate: today } } };
   }
   if (lastDate === today) {
     if (lifecycle.lastOpenedDate === today) return state;
-    return { ...state, lifecycle: { ...lifecycle, lastOpenedDate: today } };
+    return { ...state, players, household: { ...state.household, lifecycle: { ...lifecycle, lastOpenedDate: today } } };
   }
 
   let dailyHistory = lifecycle.dailyHistory;
   let questHistory = lifecycle.questHistory;
-  const priorQuests = state.quests;
-  const templates = state.questTemplates.filter((template) => template.active);
+  const priorQuests = state.household.quests;
+  const templates = state.household.questTemplates.filter((template) => template.active);
   const missedCounts = new Map<string, number>();
 
   for (const template of templates) {
@@ -146,17 +147,17 @@ export function initializeDailyLifecycle(state: AppState, now: Date): AppState {
 
   return {
     ...state,
-    quests,
-    lifecycle: { ...lifecycle, lastLifecycleDate: today, lastOpenedDate: today, dailyHistory, questHistory },
-    dailyContext: { ...state.dailyContext, date: today },
+    players,
+    household: { ...state.household, quests, lifecycle: { ...lifecycle, lastLifecycleDate: today, lastOpenedDate: today, dailyHistory, questHistory } },
   };
 }
 
-export function recordQuestCompletion(state: AppState, quest: Quest, completedAt: string): AppState {
+export function recordQuestCompletion(state: AppState, quest: Quest, playerId: PlayerId, completedAt: string): AppState {
   const date = dateKeyFromIso(completedAt);
-  const dailyHistory = addDailyEntry(state.lifecycle.dailyHistory, date, "completedQuestIds", quest.id);
-  const questHistory = state.lifecycle.questHistory.some((entry) => entry.questId === quest.id && entry.event === "completed")
-    ? state.lifecycle.questHistory
-    : [...state.lifecycle.questHistory, { questId: quest.id, templateId: quest.templateId, date, event: "completed" as const }];
-  return { ...state, lifecycle: { ...state.lifecycle, lastMeaningfulActivityDate: date, dailyHistory, questHistory } };
+  const lifecycle = state.household.lifecycle;
+  const dailyHistory = addDailyEntry(lifecycle.dailyHistory, date, "completedQuestIds", quest.id);
+  const questHistory = lifecycle.questHistory.some((entry) => entry.questId === quest.id && entry.event === "completed")
+    ? lifecycle.questHistory
+    : [...lifecycle.questHistory, { questId: quest.id, templateId: quest.templateId, date, event: "completed" as const, playerId }];
+  return { ...state, household: { ...state.household, lifecycle: { ...lifecycle, lastMeaningfulActivityDate: date, dailyHistory, questHistory } } };
 }
