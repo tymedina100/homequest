@@ -26,9 +26,6 @@ export function QuestCard({ quest, onComplete, compact = false }: { quest: Quest
   const badge = quest.kind === "rescue" ? "Rescue" : quest.kind === "comeback" ? "Welcome back" : quest.recurrence && quest.recurrence.cadence !== "manual" && quest.recurrence.cadence !== "as-needed" ? "Recurring" : quest.urgency === "today" && !done ? "Today" : null;
   return (
     <article className={`quest-card category-${quest.category} kind-${quest.kind ?? "normal"} ${done ? "is-complete" : ""} ${compact ? "compact" : ""}`}>
-      <button className="quest-check" onClick={onComplete} disabled={done} aria-label={done ? `${quest.title} completed` : `Complete ${quest.title}`}>
-        {done ? <Check size={19} strokeWidth={3} /> : <span />}
-      </button>
       <div className="quest-copy">
         <div className="quest-topline"><span>{done ? "Completed today" : categoryLabels[quest.category]}</span>{badge && <em>{badge}</em>}</div>
         <h3>{quest.title}</h3>
@@ -40,6 +37,9 @@ export function QuestCard({ quest, onComplete, compact = false }: { quest: Quest
           <strong><Sparkles size={14} /> +{quest.xpReward} XP</strong>
         </div>
       </div>
+      <button className="quick-complete-button" onClick={onComplete} disabled={done} aria-label={done ? `${quest.title} completed` : `Quick complete ${quest.title}`}>
+        <Check size={15} strokeWidth={3} /> <span>{done ? "Completed" : "Quick complete"}</span>
+      </button>
     </article>
   );
 }

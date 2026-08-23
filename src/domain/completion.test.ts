@@ -43,4 +43,17 @@ describe("atomic completion transaction", () => {
     expect(result.state.household.zones.bathroom.totalXp).toBe(before.household.zones.bathroom.totalXp + 15);
     expect(result.state.players[TYLER_PLAYER_ID].progression).toEqual(before.players[TYLER_PLAYER_ID].progression);
   });
+  it("supports Quick Complete through the full canonical transaction", () => {
+    const state = createSeedState(); const before = structuredClone(state);
+    state.players[TYLER_PLAYER_ID].dailyChest.qualifyingQuestIds = ["dinner"];
+    const result = completeQuestTransaction(state, "dishwasher", TYLER_PLAYER_ID, "2026-08-23T10:00:00.000Z");
+    expect(result.applied).toBe(true);
+    expect(result.state.players[TYLER_PLAYER_ID].progression.totalXp).toBe(before.players[TYLER_PLAYER_ID].progression.totalXp + state.household.quests[0].xpReward);
+    expect(result.state.players[RACHEL_PLAYER_ID].progression).toEqual(before.players[RACHEL_PLAYER_ID].progression);
+    expect(result.state.household.homeProgression.totalXp).toBeGreaterThan(before.household.homeProgression.totalXp);
+    expect(result.state.household.zones.kitchen.totalXp).toBeGreaterThan(before.household.zones.kitchen.totalXp);
+    expect(result.state.household.lifecycle.questHistory).toContainEqual(expect.objectContaining({ questId: "dishwasher", event: "completed", playerId: TYLER_PLAYER_ID }));
+    expect(result.state.players[TYLER_PLAYER_ID].dailyChest.status).toBe("ready");
+    expect(completeQuestTransaction(result.state, "dishwasher", TYLER_PLAYER_ID, "2026-08-23T10:01:00.000Z").applied).toBe(false);
+  });
 });

@@ -1,7 +1,20 @@
 import { createSeedState } from "@/data/seed";
-import { TYLER_PLAYER_ID } from "@/domain/players";
+import { RACHEL_PLAYER_ID, TYLER_PLAYER_ID } from "@/domain/players";
 
 /** Small realistic persisted fixtures for migration and restore regression tests. */
+export function createDailyUseFixture(now = new Date()) {
+  const state = structuredClone(createSeedState(now));
+  state.household.zones.kitchen.condition = { dishes: 43, counters: 71, floor: 68, trash: 55, food: 62 };
+  state.household.zones.bathroom.condition = { sink: 72, toilet: 31, shower: 65, floor: 58, supplies: 82 };
+  state.household.cosmetics.ownedIds.push("coffee-station", "bathroom-art");
+  state.household.zones.kitchen.cosmetics.equippedDecorationIds.counter = "coffee-station";
+  state.household.zones.bathroom.cosmetics.equippedDecorationIds.wall = "bathroom-art";
+  state.players[RACHEL_PLAYER_ID].coins = 38;
+  state.players[RACHEL_PLAYER_ID].progression.totalXp = 95;
+  state.players[RACHEL_PLAYER_ID].progression.completedQuestCount = 3;
+  return state;
+}
+
 export function schemaV6Fixture() {
   const current = structuredClone(createSeedState(new Date(2026, 7, 23, 10)));
   const { bathroom: _bathroom, ...zones } = current.household.zones;

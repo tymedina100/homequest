@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSeedState } from "@/data/seed";
-import { applyBathroomEffects, applyKitchenEffects, calculateBathroomHarmony, calculateKitchenHarmony, getBathroomLevelProgress, getZoneLevelProgress, normalizeBathroomCondition, normalizeKitchenCondition, seedBathroomCondition, seedKitchenCondition, zoneXpAtLevel } from "./zones";
+import { applyBathroomEffects, applyKitchenEffects, BATHROOM_TIERS, calculateBathroomHarmony, calculateKitchenHarmony, calculateZoneLevelProgress, calculateZoneQuestXp, decayBathroomCondition, getBathroomLevelProgress, getZoneLevelProgress, KITCHEN_TIERS, normalizeBathroomCondition, normalizeKitchenCondition, seedBathroomCondition, seedKitchenCondition, zoneXpAtLevel } from "./zones";
 
 describe("Kitchen zone model", () => {
   it("initializes a bounded shared Kitchen and calculates Harmony deterministically", () => {
@@ -28,5 +28,16 @@ describe("Kitchen zone model", () => {
     const xpLevel = getBathroomLevelProgress(900).level;
     expect(calculateBathroomHarmony(applyBathroomEffects(normalizeBathroomCondition({ sink: 80 }), { sink: -100 }))).toBeLessThan(100);
     expect(getBathroomLevelProgress(900).level).toBe(xpLevel);
+  });
+  it("shares progression and quest XP primitives without sharing room-specific tiers", () => {
+    const state = createSeedState();
+    expect(calculateZoneLevelProgress(zoneXpAtLevel(3), KITCHEN_TIERS)).toMatchObject({ level: 3, tierName: "Settled Kitchen" });
+    expect(calculateZoneLevelProgress(zoneXpAtLevel(3), BATHROOM_TIERS)).toMatchObject({ level: 3, tierName: "Steady Sanctuary" });
+    expect(calculateZoneQuestXp(state.household.quests.find((quest) => quest.id === "dishwasher")!, "kitchen")).toBe(8);
+    expect(calculateZoneQuestXp(state.household.quests.find((quest) => quest.id === "dishwasher")!, "bathroom")).toBe(0);
+  });
+  it("ages Bathroom cleanliness while leaving inventory-like supplies stable", () => {
+    const condition = { sink: 70, toilet: 70, shower: 70, floor: 70, supplies: 70 };
+    expect(decayBathroomCondition(condition, 3)).toEqual({ sink: 67, toilet: 64, shower: 68, floor: 68, supplies: 70 });
   });
 });

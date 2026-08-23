@@ -48,6 +48,8 @@ export interface ZoneLevelProgress {
   percent: number;
 }
 
+export interface ZoneTierDefinition { level: number; tier: number; name: string }
+
 export function clampCondition(value: number): number {
   return Math.max(CONDITION_MIN, Math.min(CONDITION_MAX, Math.round(Number.isFinite(value) ? value : 0)));
 }
@@ -89,7 +91,7 @@ export function zoneXpAtLevel(level: number): number {
   return total;
 }
 
-export function getZoneLevelProgress(totalXp: number): ZoneLevelProgress {
+export function calculateZoneLevelProgress(totalXp: number, tiers: readonly ZoneTierDefinition[]): ZoneLevelProgress {
   const safeXp = Math.max(0, Math.floor(totalXp));
   let level = 1;
   let threshold = zoneXpNeededForLevel(level);
@@ -99,17 +101,25 @@ export function getZoneLevelProgress(totalXp: number): ZoneLevelProgress {
     level += 1;
     threshold = zoneXpNeededForLevel(level);
   }
-  const tier = [...KITCHEN_TIERS].reverse().find((entry) => level >= entry.level) ?? KITCHEN_TIERS[0];
+  const tier = [...tiers].reverse().find((entry) => level >= entry.level) ?? tiers[0];
   const xpIntoLevel = safeXp - spent;
   return { level, tier: tier.tier, tierName: tier.name, totalXp: safeXp, xpIntoLevel, xpNeeded: threshold, percent: Math.round((xpIntoLevel / threshold) * 100) };
 }
 
-export function calculateKitchenQuestXp(quest: Quest): number {
-  if (quest.zoneId !== KITCHEN_ZONE_ID || quest.status !== "available") return 0;
+export function getZoneLevelProgress(totalXp: number): ZoneLevelProgress {
+  return calculateZoneLevelProgress(totalXp, KITCHEN_TIERS);
+}
+
+export function calculateZoneQuestXp(quest: Quest, zoneId: typeof KITCHEN_ZONE_ID | typeof BATHROOM_ZONE_ID): number {
+  if (quest.zoneId !== zoneId || quest.status !== "available") return 0;
   const effort = quest.effort === "high" ? 6 : quest.effort === "medium" ? 3 : 0;
   const time = Math.min(10, Math.floor(quest.estimatedMinutes / 5) * 2);
   const kind = quest.kind === "rescue" ? 6 : 0;
   return 6 + effort + time + kind;
+}
+
+export function calculateKitchenQuestXp(quest: Quest): number {
+  return calculateZoneQuestXp(quest, KITCHEN_ZONE_ID);
 }
 
 export function normalizeBathroomCondition(condition: Partial<BathroomCondition>): BathroomCondition {
@@ -140,17 +150,11 @@ export function seedBathroomCondition(homeStats: HomeStats): BathroomCondition {
 }
 
 export function getBathroomLevelProgress(totalXp: number): ZoneLevelProgress {
-  const base = getZoneLevelProgress(totalXp);
-  const tier = [...BATHROOM_TIERS].reverse().find((entry) => base.level >= entry.level) ?? BATHROOM_TIERS[0];
-  return { ...base, tier: tier.tier, tierName: tier.name };
+  return calculateZoneLevelProgress(totalXp, BATHROOM_TIERS);
 }
 
 export function calculateBathroomQuestXp(quest: Quest): number {
-  if (quest.zoneId !== BATHROOM_ZONE_ID || quest.status !== "available") return 0;
-  const effort = quest.effort === "high" ? 6 : quest.effort === "medium" ? 3 : 0;
-  const time = Math.min(10, Math.floor(quest.estimatedMinutes / 5) * 2);
-  const kind = quest.kind === "rescue" ? 6 : 0;
-  return 6 + effort + time + kind;
+  return calculateZoneQuestXp(quest, BATHROOM_ZONE_ID);
 }
 
 export function applyBathroomEffects(condition: BathroomCondition, effects: Partial<BathroomCondition> = {}): BathroomCondition {
@@ -166,7 +170,8 @@ export function decayBathroomCondition(condition: BathroomCondition, elapsedDays
     toilet: -2 * days,
     shower: -Math.floor((days + 1) / 2),
     floor: -Math.floor((days + 1) / 2),
-    supplies: -days,
+    // Supplies are inventory-like and should change through restocking work, not an abstract daily leak.
+    supplies: 0,
   });
 }
 

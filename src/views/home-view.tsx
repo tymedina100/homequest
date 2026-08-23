@@ -1,8 +1,8 @@
 "use client";
 
-import { Bath, ChefHat, ChevronRight, Coins, Compass, Gift, Home, Leaf, Lock, ShieldCheck, Sparkles } from "lucide-react";
+import { Bath, Check, ChefHat, ChevronRight, Coins, Compass, Gift, Home, Leaf, Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { getLevelProgress } from "@/domain/progression";
-import { recommendQuest } from "@/domain/recommendations";
+import { recommendQuest, selectHomeQuestPreview } from "@/domain/recommendations";
 import type { HomeStatKey } from "@/domain/types";
 import { useHomeQuest } from "@/state/homequest-context";
 import { HomeScene } from "@/components/home-scene";
@@ -25,12 +25,21 @@ export function HomeView({ goToQuests, goToKitchen, goToBathroom }: { goToQuests
   const household = state.household;
   const progress = getLevelProgress(activePlayer.progression.totalXp);
   const homeProgress = getHomeLevelProgress(household.homeProgression);
-  const recommendation = recommendQuest(household.quests, activePlayer.dailyContext, household.homeStats);
+  const recommendation = recommendQuest(household.quests, activePlayer.dailyContext, household.homeStats, { kitchenCondition: household.zones.kitchen.condition, bathroomCondition: household.zones.bathroom.condition });
   const available = household.quests.filter((quest) => quest.status === "available");
+  const previewQuests = selectHomeQuestPreview(household.quests, recommendation?.quest.id);
   const kitchenProgress = getZoneLevelProgress(household.zones.kitchen.totalXp);
   const kitchenHarmony = calculateKitchenHarmony(household.zones.kitchen.condition);
   const bathroomProgress = getBathroomLevelProgress(household.zones.bathroom.totalXp);
   const bathroomHarmony = calculateBathroomHarmony(household.zones.bathroom.condition);
+  const recommendationPanel = (
+    <aside className="recommendation panel">
+      <div className="recommendation-icon"><Compass size={22} /></div>
+      <p className="eyebrow">What should I do?</p>
+      {recommendation ? <><h2>{recommendation.quest.title}</h2><div className="recommendation-meta">{recommendation.quest.estimatedMinutes} min <span>·</span> {recommendation.quest.effort} effort <span>·</span> +{recommendation.quest.xpReward} XP</div><blockquote>“{recommendation.reason}”</blockquote><button className="primary-button" aria-label={`Quick complete ${recommendation.quest.title}`} onClick={() => completeQuest(recommendation.quest.id)}><Check size={17} /> Quick complete</button></> : <><h2>All clear for now</h2><blockquote>“You’ve done enough. Enjoy the room you cared for.”</blockquote></>}
+      <div className="recommendation-footer"><ShieldCheck size={15} /> Chosen for your time and energy</div>
+    </aside>
+  );
 
   return (
     <div className="view-stack home-view">
@@ -53,6 +62,7 @@ export function HomeView({ goToQuests, goToKitchen, goToBathroom }: { goToQuests
       </section>
 
       <div className="home-grid">
+        {recommendationPanel}
         <section className="home-hero panel">
           <div className="hero-heading"><div><p className="eyebrow">Your sanctuary</p><h2>Home is finding its rhythm.</h2><div className="home-level-line"><Home size={14} /> Home Lv. {homeProgress.level} <span>·</span> {homeProgress.tierName}</div></div><div className="harmony"><Leaf size={16} /> Steady</div></div>
           <HomeScene stats={household.homeStats} tier={homeProgress.tier} tierName={homeProgress.tierName} cosmetics={household.cosmetics} players={household.playerIds.map((id) => state.players[id]).filter(Boolean)} activePlayerId={activePlayer.id} />
@@ -68,21 +78,6 @@ export function HomeView({ goToQuests, goToKitchen, goToBathroom }: { goToQuests
           </div>
         </section>
 
-        <aside className="recommendation panel">
-          <div className="recommendation-icon"><Compass size={22} /></div>
-          <p className="eyebrow">What should I do?</p>
-          {recommendation ? (
-            <>
-              <h2>{recommendation.quest.title}</h2>
-              <div className="recommendation-meta">{recommendation.quest.estimatedMinutes} min <span>·</span> {recommendation.quest.effort} effort <span>·</span> +{recommendation.quest.xpReward} XP</div>
-              <blockquote>“{recommendation.reason.charAt(0).toUpperCase() + recommendation.reason.slice(1)}”</blockquote>
-              <button className="primary-button" onClick={() => completeQuest(recommendation.quest.id)}><Sparkles size={17} /> Begin small win</button>
-            </>
-          ) : (
-            <><h2>All clear for now</h2><blockquote>“You’ve done enough. Enjoy the room you cared for.”</blockquote></>
-          )}
-          <div className="recommendation-footer"><ShieldCheck size={15} /> Chosen for your time and energy</div>
-        </aside>
       </div>
 
       <section className="home-zones"><SectionHeading eyebrow="The house is becoming your game board" title="Our Home" /><div className="zone-entry-grid"><button className="zone-entry-card panel" onClick={goToKitchen}><div className="zone-entry-art"><ChefHat size={28} /><i /></div><div><span className="eyebrow">Shared home zone</span><h3>Enter the Kitchen</h3><p>{kitchenProgress.tierName} · Level {kitchenProgress.level}</p></div><div className="zone-entry-condition"><strong>{kitchenHarmony}%</strong><span>Harmony</span></div><ChevronRight size={20} /></button><button className="zone-entry-card bathroom-entry panel" onClick={goToBathroom}><div className="zone-entry-art"><Bath size={28} /><i /></div><div><span className="eyebrow">Shared home zone</span><h3>Enter the Bathroom</h3><p>{bathroomProgress.tierName} · Level {bathroomProgress.level}</p></div><div className="zone-entry-condition"><strong>{bathroomHarmony}%</strong><span>Harmony</span></div><ChevronRight size={20} /></button></div></section>
@@ -90,7 +85,7 @@ export function HomeView({ goToQuests, goToKitchen, goToBathroom }: { goToQuests
       <section>
         <SectionHeading eyebrow="A short, kind list" title="Today’s quests" action={<button className="text-button" onClick={goToQuests}>See quest log <ChevronRight size={16} /></button>} />
         <div className="quest-list">
-          {available.slice(0, 4).map((quest) => <QuestCard key={quest.id} quest={quest} onComplete={() => completeQuest(quest.id)} compact />)}
+          {previewQuests.map((quest) => <QuestCard key={quest.id} quest={quest} onComplete={() => completeQuest(quest.id)} compact />)}
           {available.length === 0 && <div className="empty-state"><Sparkles size={25} /><h3>The quest board is clear</h3><p>That’s a win. Your home can rest with you.</p></div>}
         </div>
       </section>
