@@ -21,7 +21,7 @@ const statLabels: Record<HomeStatKey, { label: string; icon: string }> = {
 };
 
 export function HomeView({ goToQuests, goToKitchen, goToBathroom }: { goToQuests: () => void; goToKitchen: () => void; goToBathroom: () => void }) {
-  const { state, activePlayer, completeQuest, updateDailyContext, claimDailyChest } = useHomeQuest();
+  const { state, activePlayer, characterMoment, completeQuest, updateDailyContext, claimDailyChest } = useHomeQuest();
   const household = state.household;
   const progress = getLevelProgress(activePlayer.progression.totalXp);
   const homeProgress = getHomeLevelProgress(household.homeProgression);
@@ -65,7 +65,7 @@ export function HomeView({ goToQuests, goToKitchen, goToBathroom }: { goToQuests
         {recommendationPanel}
         <section className="home-hero panel">
           <div className="hero-heading"><div><p className="eyebrow">Your sanctuary</p><h2>Home is finding its rhythm.</h2><div className="home-level-line"><Home size={14} /> Home Lv. {homeProgress.level} <span>·</span> {homeProgress.tierName}</div></div><div className="harmony"><Leaf size={16} /> Steady</div></div>
-          <HomeScene stats={household.homeStats} tier={homeProgress.tier} tierName={homeProgress.tierName} cosmetics={household.cosmetics} players={household.playerIds.map((id) => state.players[id]).filter(Boolean)} activePlayerId={activePlayer.id} />
+          <HomeScene stats={household.homeStats} tier={homeProgress.tier} tierName={homeProgress.tierName} cosmetics={household.cosmetics} players={household.playerIds.map((id) => state.players[id]).filter(Boolean)} activePlayerId={activePlayer.id} characterMoment={characterMoment} focused={Boolean(recommendation)} />
           <div className="home-xp-line"><span>Home progress</span><div className="progress-track" role="progressbar" aria-label="Permanent Home Level progress" aria-valuenow={homeProgress.percent}><i style={{ width: `${homeProgress.percent}%` }} /></div><strong>{homeProgress.xpIntoLevel} / {homeProgress.xpNeeded}</strong></div>
           <div className="home-stats">
             {(Object.entries(household.homeStats) as [HomeStatKey, number][]).map(([key, value]) => (

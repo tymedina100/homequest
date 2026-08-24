@@ -9,6 +9,7 @@ import { equipCosmetic as equipCosmeticDomain, purchaseCosmetic as purchaseCosme
 import { toLocalDateKey } from "@/domain/dates";
 import { createOnboardedState, type OnboardingDraft } from "@/domain/onboarding";
 import { parseBackup, type BackupParseResult } from "@/domain/backup";
+import { momentForCompletion, type CharacterMoment } from "@/domain/character-state";
 import { getActivePlayer, updatePlayer } from "@/domain/players";
 import { createQuestTemplate as createQuestTemplateDomain, hasTemplateHistory, syncTemplateOccurrence } from "@/domain/templates";
 import type { QuestTemplateDraft } from "@/domain/templates";
@@ -26,6 +27,7 @@ interface HomeQuestContextValue {
   hydrated: boolean;
   needsOnboarding: boolean;
   completion: RewardEvent | null;
+  characterMoment: CharacterMoment | null;
   completeQuest: (questId: string) => void;
   switchPlayer: (playerId: PlayerId) => void;
   updateAvatar: (changes: Partial<AvatarConfig>) => void;
@@ -56,6 +58,7 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [completion, setCompletion] = useState<RewardEvent | null>(null);
+  const [characterMoment, setCharacterMoment] = useState<CharacterMoment | null>(null);
 
   const persistence = useMemo(
     () => (typeof window === "undefined" ? null : new LocalStoragePersistence(window.localStorage)),
@@ -80,13 +83,23 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
     if (hydrated && !needsOnboarding) void persistence?.save(state);
   }, [state, hydrated, needsOnboarding, persistence]);
 
+  useEffect(() => {
+    if (!characterMoment) return;
+    const timer = window.setTimeout(() => setCharacterMoment(null), state.session.preferences.reducedMotion ? 500 : 1800);
+    return () => window.clearTimeout(timer);
+  }, [characterMoment, state.session.preferences.reducedMotion]);
+
   const completeQuest = useCallback((questId: string) => {
     setState((current) => {
       const playerId = current.session.activePlayerId;
       const quest = current.household.quests.find((item) => item.id === questId);
       if (!quest || quest.status === "completed") return current;
       const result = completeQuestTransaction(current, questId, playerId, new Date().toISOString());
-      if (result.applied && result.summary) setCompletion({ kind: "quest", summary: result.summary, id: Date.now() });
+      if (result.applied && result.summary) {
+        const id = Date.now();
+        setCompletion({ kind: "quest", summary: result.summary, id });
+        setCharacterMoment(momentForCompletion(quest, result.summary, playerId, id));
+      }
       return result.state;
     });
   }, []);
@@ -106,6 +119,7 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
   const switchPlayer = useCallback((playerId: PlayerId) => {
     setState((current) => current.players[playerId] ? { ...current, session: { ...current.session, activePlayerId: playerId } } : current);
     setCompletion(null);
+    setCharacterMoment({ id: Date.now(), playerId, state: "welcome", shared: false, cue: "home" });
   }, []);
 
   const updateAvatar = useCallback((changes: Partial<AvatarConfig>) => {
@@ -185,7 +199,11 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
   const claimDailyChest = useCallback(() => {
     setState((current) => {
       const result = claimDailyChestDomain(current, current.session.activePlayerId, new Date().toISOString());
-      if (result.claimed) setCompletion({ kind: "chest", id: Date.now(), title: "Daily Chest opened", message: "+20 coins · +20 XP · +12 Home XP" });
+      if (result.claimed) {
+        const id = Date.now();
+        setCompletion({ kind: "chest", id, title: "Daily Chest opened", message: "+20 coins · +20 XP · +12 Home XP" });
+        setCharacterMoment({ id, playerId: current.session.activePlayerId, state: "celebrate", shared: false, cue: "home" });
+      }
       return result.state;
     });
   }, []);
@@ -194,12 +212,13 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
     setState(createOnboardedState(draft, new Date()));
     setNeedsOnboarding(false);
     setCompletion(null);
+    setCharacterMoment(null);
   }, []);
 
   const inspectBackup = useCallback((raw: string) => parseBackup(raw, new Date()), []);
   const restoreBackup = useCallback((raw: string) => {
     const result = inspectBackup(raw);
-    if (result.ok) { setState(result.state); setNeedsOnboarding(false); setCompletion(null); }
+    if (result.ok) { setState(result.state); setNeedsOnboarding(false); setCompletion(null); setCharacterMoment(null); }
     return result;
   }, [inspectBackup]);
 
@@ -208,12 +227,13 @@ export function HomeQuestProvider({ children }: { children: React.ReactNode }) {
     setState(createSeedState(new Date()));
     setNeedsOnboarding(true);
     setCompletion(null);
+    setCharacterMoment(null);
   }, [persistence]);
 
   const dismissCompletion = useCallback(() => setCompletion(null), []);
 
   const activePlayer = getActivePlayer(state);
-  const value = useMemo(() => ({ state, activePlayer, hydrated, needsOnboarding, completion, completeQuest, switchPlayer, updateAvatar, updatePlayerAvatar, updateHouseholdName, addInventoryItem, updatePreferences, updateDailyContext, createQuestTemplate, updateQuestTemplate, archiveQuestTemplate, restoreQuestTemplate, deleteQuestTemplate, purchaseCosmetic, equipCosmetic, claimDailyChest, completeOnboarding, inspectBackup, restoreBackup, reset, dismissCompletion }), [state, activePlayer, hydrated, needsOnboarding, completion, completeQuest, switchPlayer, updateAvatar, updatePlayerAvatar, updateHouseholdName, addInventoryItem, updatePreferences, updateDailyContext, createQuestTemplate, updateQuestTemplate, archiveQuestTemplate, restoreQuestTemplate, deleteQuestTemplate, purchaseCosmetic, equipCosmetic, claimDailyChest, completeOnboarding, inspectBackup, restoreBackup, reset, dismissCompletion]);
+  const value = useMemo(() => ({ state, activePlayer, hydrated, needsOnboarding, completion, characterMoment, completeQuest, switchPlayer, updateAvatar, updatePlayerAvatar, updateHouseholdName, addInventoryItem, updatePreferences, updateDailyContext, createQuestTemplate, updateQuestTemplate, archiveQuestTemplate, restoreQuestTemplate, deleteQuestTemplate, purchaseCosmetic, equipCosmetic, claimDailyChest, completeOnboarding, inspectBackup, restoreBackup, reset, dismissCompletion }), [state, activePlayer, hydrated, needsOnboarding, completion, characterMoment, completeQuest, switchPlayer, updateAvatar, updatePlayerAvatar, updateHouseholdName, addInventoryItem, updatePreferences, updateDailyContext, createQuestTemplate, updateQuestTemplate, archiveQuestTemplate, restoreQuestTemplate, deleteQuestTemplate, purchaseCosmetic, equipCosmetic, claimDailyChest, completeOnboarding, inspectBackup, restoreBackup, reset, dismissCompletion]);
 
   return <HomeQuestContext.Provider value={value}>{children}</HomeQuestContext.Provider>;
 }

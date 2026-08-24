@@ -25,12 +25,17 @@ export type ZoneEffects = Partial<Record<ZoneConditionKey, number>>;
 export type ZoneDecorationSlot = "counter" | "wall" | "shelf" | "plant" | "lighting" | "floor";
 export type PlayerId = string;
 export type SkinTone = "porcelain" | "peach" | "golden" | "warm" | "brown" | "deep";
-export type HairStyle = "short" | "waves" | "curls" | "bun" | "mohawk";
+export type HairStyle = "textured-crop" | "side-part" | "messy-short" | "medium-waves" | "curls" | "long-curls" | "ponytail" | "bun" | "long-waves" | "undercut";
 export type HairColor = "espresso" | "chestnut" | "copper" | "golden" | "midnight" | "rose";
-export type OutfitStyle = "tee" | "sweater" | "overalls" | "apron" | "hoodie";
+export type FaceShape = "round" | "oval" | "angular" | "soft";
+export type EyeStyle = "calm" | "bright" | "almond";
+export type FreckleStyle = "none" | "soft";
+export type OutfitStyle = "tee" | "crewneck" | "hoodie" | "oversized-sweater" | "jacket" | "flannel" | "overalls" | "apron" | "button-up" | "lounge";
 export type OutfitColor = "moss" | "amber" | "berry" | "ocean" | "plum" | "cream";
-export type AvatarAccessory = "none" | "glasses" | "earrings" | "headband" | "cap";
-export type AvatarExpression = "content" | "bright" | "focused" | "sleepy";
+export type AvatarAccessory = "none" | "round-glasses" | "rectangle-glasses" | "earrings" | "headband" | "cap" | "beanie" | "necklace" | "hair-clip";
+export type AvatarExpression = "content" | "bright" | "focused" | "sleepy" | "excited" | "determined";
+export type CharacterAnimationState = "idle" | "focused" | "working" | "celebrate" | "levelUp" | "sleepy" | "welcome";
+export type CharacterActionCue = "home" | "sink" | "stove" | "toilet" | "supplies";
 
 export interface QuestRecurrence {
   cadence: "daily" | "weekly" | "weekdays" | "interval" | "manual" | "as-needed";
@@ -246,6 +251,9 @@ export interface DailyLifecycleState {
 
 export interface AvatarConfig {
   skinTone: SkinTone;
+  faceShape: FaceShape;
+  eyeStyle: EyeStyle;
+  freckles: FreckleStyle;
   hairStyle: HairStyle;
   hairColor: HairColor;
   outfit: OutfitStyle;

@@ -136,13 +136,66 @@ test("a v4 fixture migrates to the existing household without onboarding", async
   await expect(page.getByRole("button", { name: /Rachel's character/ }).first()).toBeVisible();
 });
 
-test("character changes persist without changing another player", async ({ page }, testInfo) => {
+test("Character Studio saves a multi-option Tyler look and persists it", async ({ page }, testInfo) => {
   const state = createSeedState(new Date(2026, 7, 23, 10)); await withSave(page, state); await page.goto("/"); await openProfile(page, testInfo.project.name);
-  await page.getByRole("tab", { name: "Character" }).click(); await page.getByRole("button", { name: "Copper", exact: true }).click();
+  await page.getByRole("tab", { name: "Character" }).click();
+  await page.getByRole("button", { name: "Hair style: Curls" }).click(); await page.getByRole("button", { name: "Hair color: Copper" }).click();
+  await page.getByRole("tab", { name: "Outfit" }).click(); await page.getByRole("button", { name: "Outfit: Jacket" }).click();
+  await page.getByRole("tab", { name: "Accessory" }).click(); await page.getByRole("button", { name: "Accessory: Cap" }).click();
+  await page.getByRole("button", { name: "Save character" }).click();
   await expect.poll(async () => (await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).players["player-tyler"].avatar.hairColor, STORAGE_KEY))).toBe("copper");
   await page.reload();
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), STORAGE_KEY);
-  expect(saved.players["player-tyler"].avatar.hairColor).toBe("copper"); expect(saved.players["player-rachel"].avatar.hairColor).toBe(state.players["player-rachel"].avatar.hairColor);
+  expect(saved.players["player-tyler"].avatar).toMatchObject({ hairStyle: "curls", hairColor: "copper", outfit: "jacket", accessory: "cap" });
+  expect(saved.players["player-rachel"].avatar).toEqual(state.players["player-rachel"].avatar);
+});
+
+test("Rachel customization remains independent and player switching updates the profile", async ({ page }, testInfo) => {
+  const state = createSeedState(new Date(2026, 7, 23, 10)); await withSave(page, state); await page.goto("/");
+  await switchTo(page, testInfo.project.name, "Rachel");
+  await expect(page.locator('.home-scene .scene-avatar[data-character="Rachel"]')).toHaveAttribute("data-active", "true");
+  await expect(page.locator('.home-scene .scene-avatar[data-character="Tyler"]')).toHaveAttribute("data-active", "false");
+  await openProfile(page, testInfo.project.name);
+  await expect(page.locator(".profile-hero").getByRole("heading", { name: "Rachel" })).toBeVisible();
+  await page.getByRole("tab", { name: "Character" }).click();
+  await page.getByRole("button", { name: "Hair style: Ponytail" }).click();
+  await page.getByRole("tab", { name: "Outfit" }).click(); await page.getByRole("button", { name: "Outfit: Apron" }).click();
+  await page.getByRole("tab", { name: "Accessory" }).click(); await page.getByRole("button", { name: "Accessory: Hair clip" }).click();
+  await page.getByRole("button", { name: "Save character" }).click();
+  const saved = await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), STORAGE_KEY)).toMatchObject({ session: { activePlayerId: "player-rachel" } }); void saved;
+  const after = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), STORAGE_KEY);
+  expect(after.players["player-rachel"].avatar).toMatchObject({ hairStyle: "ponytail", outfit: "apron", accessory: "hair-clip" });
+  expect(after.players["player-tyler"].avatar).toEqual(state.players["player-tyler"].avatar);
+});
+
+test("Home and both Zones render two dedicated Scene avatars", async ({ page }) => {
+  await withSave(page, createSeedState(new Date(2026, 7, 23, 10))); await page.goto("/");
+  await expect(page.locator(".home-scene .scene-avatar")).toHaveCount(2);
+  await page.getByRole("button", { name: /Enter the Kitchen/ }).click(); await expect(page.locator(".kitchen-scene .scene-avatar")).toHaveCount(2);
+  await page.getByRole("button", { name: "Our Home" }).click(); await page.getByRole("button", { name: /Enter the Bathroom/ }).click(); await expect(page.locator(".bathroom-scene .scene-avatar")).toHaveCount(2);
+});
+
+test("reduced motion preserves completion feedback and character state meaning", async ({ page }, testInfo) => {
+  await withSave(page, createSeedState(new Date(2026, 7, 23, 10))); await page.goto("/"); await openProfile(page, testInfo.project.name);
+  await page.getByRole("switch").click(); await expect(page.locator(".app-shell")).toHaveAttribute("data-reduced-motion", "true");
+  if (testInfo.project.name === "mobile") { await page.getByRole("button", { name: "Open menu" }).click(); await page.getByLabel("Primary navigation").getByRole("button", { name: "Home", exact: true }).click(); }
+  else await page.getByLabel("Primary navigation").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("button", { name: "Quick complete Run the dishwasher" }).first().click();
+  await expect(page.getByRole("status")).toContainText("Tyler completed a quest");
+  await expect(page.locator('.home-scene .scene-avatar[data-character="Tyler"]')).toHaveCount(1);
+});
+
+test("Character System primary views have no unexpected browser warnings or errors", async ({ page }, testInfo) => {
+  const unexpected: string[] = [];
+  page.on("console", (message) => { if (["warning", "error"].includes(message.type())) unexpected.push(`${message.type()}: ${message.text()}`); });
+  page.on("pageerror", (error) => unexpected.push(`pageerror: ${error.message}`));
+  await withSave(page, createSeedState(new Date(2026, 7, 23, 10))); await page.goto("/");
+  await expect(page.locator(".home-scene .scene-avatar")).toHaveCount(2);
+  await page.getByRole("button", { name: /Enter the Kitchen/ }).click(); await expect(page.locator(".kitchen-scene .scene-avatar")).toHaveCount(2);
+  await page.getByRole("button", { name: "Our Home" }).click(); await page.getByRole("button", { name: /Enter the Bathroom/ }).click(); await expect(page.locator(".bathroom-scene .scene-avatar")).toHaveCount(2);
+  await page.getByRole("button", { name: "Our Home" }).click(); await openProfile(page, testInfo.project.name); await page.getByRole("tab", { name: "Character" }).click();
+  await expect(page.getByTestId("character-studio")).toBeVisible();
+  expect(unexpected).toEqual([]);
 });
 
 test("Daily Chest claim is persistent and idempotent", async ({ page }) => {

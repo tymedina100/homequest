@@ -19,7 +19,7 @@ const conditionCopy: Record<KitchenConditionKey, { label: string; icon: string }
 function impactLabel(key: KitchenConditionKey, amount: number): string { return `${conditionCopy[key].label} ${amount > 0 ? "+" : ""}${amount}`; }
 
 export function KitchenView({ goHome, goInventory, goMeals }: { goHome: () => void; goInventory: () => void; goMeals: () => void }) {
-  const { state, activePlayer, completeQuest, purchaseCosmetic, equipCosmetic } = useHomeQuest();
+  const { state, activePlayer, characterMoment, completeQuest, purchaseCosmetic, equipCosmetic } = useHomeQuest();
   const kitchen = state.household.zones.kitchen;
   const progress = getZoneLevelProgress(kitchen.totalXp);
   const harmony = calculateKitchenHarmony(kitchen.condition);
@@ -41,7 +41,7 @@ export function KitchenView({ goHome, goInventory, goMeals }: { goHome: () => vo
 
     <section className="kitchen-hero panel">
       <div className="kitchen-hero-heading"><div><p className="eyebrow">Shared household room</p><h2>{progress.tierName}</h2></div><div className="harmony-orb"><span>{harmony}%</span><small>Kitchen Harmony</small></div></div>
-      <KitchenScene condition={kitchen.condition} tier={progress.tier} tierName={progress.tierName} cosmetics={kitchen.cosmetics} players={state.household.playerIds.map((id) => state.players[id]).filter(Boolean)} activePlayerId={activePlayer.id} />
+      <KitchenScene condition={kitchen.condition} tier={progress.tier} tierName={progress.tierName} cosmetics={kitchen.cosmetics} players={state.household.playerIds.map((id) => state.players[id]).filter(Boolean)} activePlayerId={activePlayer.id} characterMoment={characterMoment} focused={Boolean(recommendation)} />
       <div className="zone-xp-line"><span>Permanent Kitchen progress</span><ProgressBar value={progress.percent} label={`Kitchen Level ${progress.level} progress`} /><strong>{kitchen.totalXp} total XP</strong></div>
     </section>
 

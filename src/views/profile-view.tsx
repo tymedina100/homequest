@@ -15,12 +15,13 @@ import { CharacterAvatar } from "@/components/character-avatar";
 import { ProgressBar, SectionHeading } from "@/components/ui";
 import { useHomeQuest } from "@/state/homequest-context";
 import { backupFilename, serializeBackup, type RestorePreview } from "@/domain/backup";
+import { characterStateForPlayer } from "@/domain/character-state";
 
 const categoryNames: Record<QuestCategory, string> = { cleaning: "Cleaning", cooking: "Cooking", organization: "Organization", homekeeping: "Homekeeping" };
 const categoryIcons: Record<QuestCategory, string> = { cleaning: "✦", cooking: "♨", organization: "◇", homekeeping: "⌂" };
 
 export function ProfileView() {
-  const { state, activePlayer, reset, updatePreferences, purchaseCosmetic, equipCosmetic, updateHouseholdName, inspectBackup, restoreBackup } = useHomeQuest();
+  const { state, activePlayer, characterMoment, reset, updatePreferences, purchaseCosmetic, equipCosmetic, updateHouseholdName, inspectBackup, restoreBackup } = useHomeQuest();
   const [tab, setTab] = useState<"progress" | "character" | "journal" | "collection">("progress");
   const [householdName, setHouseholdName] = useState(state.household.name); const [restorePreview, setRestorePreview] = useState<RestorePreview | null>(null); const [restoreRaw, setRestoreRaw] = useState<string | null>(null); const [backupError, setBackupError] = useState(""); const [resetArmed, setResetArmed] = useState(false); const importRef = useRef<HTMLInputElement>(null);
   const today = toLocalDateKey(new Date()); const [selectedDay, setSelectedDay] = useState(today); const [selectedWeek, setSelectedWeek] = useState(getWeekStart(today));
@@ -30,7 +31,7 @@ export function ProfileView() {
   const contributionLine = (values: Record<PlayerId, number>) => state.household.playerIds.map((id) => `${state.players[id].name} ${values[id] ?? 0}`).join(" · ");
   return <div className="view-stack">
     <section className="profile-hero panel">
-      <div className="profile-avatar character"><CharacterAvatar config={activePlayer.avatar} name={activePlayer.name} size={108} /><span><Sparkles size={15} /></span></div>
+      <div className="profile-avatar character"><CharacterAvatar config={activePlayer.avatar} name={activePlayer.name} size={142} state={characterStateForPlayer(characterMoment, activePlayer.id, activePlayer.dailyContext.energy)} /><span><Sparkles size={15} /></span></div>
       <div className="profile-main"><p className="eyebrow">{equippedTitle}</p><h1>{activePlayer.name}</h1><p>Player Level {playerProgress.level} · Home Level {home.level} · {activePlayer.progression.completedQuestCount} personal contributions</p><div className="profile-progress"><ProgressBar value={playerProgress.percent} label="Player experience progress" /><span>{playerProgress.xpIntoLevel} / {playerProgress.xpNeeded} XP to Player Level {playerProgress.level + 1}</span></div></div>
       <div className="total-xp"><Coins size={20} /><strong>{activePlayer.coins}</strong><span>Coins</span></div>
     </section>
@@ -43,7 +44,7 @@ export function ProfileView() {
       <section><SectionHeading eyebrow={`${activePlayer.achievements.filter((item) => item.unlockedAt).length} of ${ACHIEVEMENTS.length} discovered by ${activePlayer.name}`} title="Personal achievements" /><div className="achievement-grid">{ACHIEVEMENTS.map((definition) => { const unlocked = activePlayer.achievements.some((item) => item.id === definition.id && item.unlockedAt); return <article className={`achievement-card panel ${unlocked ? "unlocked" : "locked"}`} key={definition.id}><div className="achievement-seal">{unlocked ? <Award size={22} /> : <Lock size={18} />}</div><div><span>{unlocked ? "Achievement unlocked" : definition.hidden ? "Hidden achievement" : "Still ahead"}</span><h3>{unlocked || !definition.hidden ? definition.title : "???"}</h3><p>{unlocked || !definition.hidden ? definition.description : "A quiet secret is waiting somewhere in your journey."}</p><small>{definition.reward.coins ? `Reward · ${definition.reward.coins} coins` : "A special reward awaits"}</small></div>{unlocked && <Check className="reward-check" size={17} />}</article>; })}</div></section>
     </>}
 
-    {tab === "character" && <AvatarCreator />}
+    {tab === "character" && <AvatarCreator key={activePlayer.id} />}
 
     {tab === "collection" && <>
       <section className="collection-intro panel"><div><p className="eyebrow">Shared home · personal titles</p><h2>Make the sanctuary yours, together.</h2><p>Themes and decorations belong to the household. Titles stay with {activePlayer.name}.</p></div><div className="collection-balance"><Coins size={18} /><strong>{activePlayer.coins}</strong><span>{activePlayer.name}&apos;s coins</span></div></section>

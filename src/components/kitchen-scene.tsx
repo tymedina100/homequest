@@ -1,9 +1,10 @@
 import { ChefHat, Coffee, CookingPot, Flower2, LampCeiling, Refrigerator, Sparkles, Utensils } from "lucide-react";
-import { CharacterAvatar } from "./character-avatar";
+import { SceneAvatar } from "./scene-avatar";
 import type { KitchenCondition, PlayerState, ZoneCosmeticCollection } from "@/domain/types";
 import { calculateKitchenHarmony } from "@/domain/zones";
+import { characterStateForPlayer, type CharacterMoment } from "@/domain/character-state";
 
-export function KitchenScene({ condition, tier, tierName, cosmetics, players, activePlayerId }: { condition: KitchenCondition; tier: number; tierName: string; cosmetics: ZoneCosmeticCollection; players: PlayerState[]; activePlayerId: string }) {
+export function KitchenScene({ condition, tier, tierName, cosmetics, players, activePlayerId, characterMoment, focused = false }: { condition: KitchenCondition; tier: number; tierName: string; cosmetics: ZoneCosmeticCollection; players: PlayerState[]; activePlayerId: string; characterMoment?: CharacterMoment | null; focused?: boolean }) {
   const harmony = calculateKitchenHarmony(condition);
   const equipped = new Set(Object.values(cosmetics.equippedDecorationIds));
   const pendant = tier >= 3 || equipped.has("warm-pendant-light");
@@ -28,7 +29,8 @@ export function KitchenScene({ condition, tier, tierName, cosmetics, players, ac
       {board && <div className="recipe-board"><ChefHat size={18} /><span>Tonight’s idea</span><b>something cozy</b></div>}
       <div className="trash-cue"><span /><i /></div>
       {runner && <div className={`kitchen-runner ${equipped.has("cozy-kitchen-runner") ? "equipped" : ""}`} />}
-      <div className="kitchen-characters" aria-label="Household members in the Kitchen">{players.map((player) => <div className={player.id === activePlayerId ? "active" : ""} key={player.id}><CharacterAvatar config={player.avatar} name={player.name} size={76} /><span>{player.name}</span></div>)}</div>
+      <div className="kitchen-characters" aria-label="Household members in the Kitchen">{players.map((player) => { const active = player.id === activePlayerId; const state = characterStateForPlayer(characterMoment ?? null, player.id, player.dailyContext.energy, active && focused); return <div className={active ? "active" : ""} key={player.id}><SceneAvatar config={player.avatar} name={player.name} size={92} state={state} active={active} /><span>{player.name}</span></div>; })}</div>
+      {characterMoment?.cue && ["sink", "stove"].includes(characterMoment.cue) && <div className={`zone-action-cue kitchen-cue cue-${characterMoment.cue}`} aria-hidden="true">✦</div>}
       <div className="kitchen-floor" />
       <div className="kitchen-light" style={{ opacity: 0.26 + harmony / 210 }} />
       <div className="kitchen-scene-label"><Sparkles size={14} /> {tierName} <span>·</span> Kitchen Tier {tier}</div>
