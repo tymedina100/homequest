@@ -9,7 +9,13 @@ const tone = (color: string, mix: string, amount: number) => `color-mix(in srgb,
 
 function HairBack({ config, color }: { config: AvatarConfig; color: string }) {
   const shade = tone(color, "#160e0d", 72);
-  if (isHeadwear(config.accessory)) return <path d="M40 62Q40 24 70 21Q101 24 101 65L96 92Q86 86 78 92Q69 86 61 92Q50 85 42 92Z" fill={shade} stroke={INK} strokeWidth="3" />;
+  if (isHeadwear(config.accessory)) {
+    if (config.hairStyle === "long-curls" || config.hairStyle === "curls") return <g fill={shade} stroke={INK} strokeWidth="2.8">{[[43,45],[39,61],[40,78],[47,93],[59,101],[81,101],[93,94],[101,79],[102,61],[97,45]].map(([cx,cy],i)=><circle key={i} cx={cx} cy={cy} r="14" />)}</g>;
+    if (config.hairStyle === "long-waves" || config.hairStyle === "medium-waves") return <path d="M40 60Q40 23 70 20Q101 23 101 62L106 100Q96 94 87 102Q78 95 69 103Q58 95 49 102Q42 95 35 100Q40 80 40 60Z" fill={shade} stroke={INK} strokeWidth="3" />;
+    if (config.hairStyle === "ponytail") return <g><path d="M40 61Q40 24 70 21Q101 24 101 63L96 88H44Z" fill={shade} stroke={INK} strokeWidth="3" /><path d="M97 44Q119 47 116 80Q113 99 99 105Q90 98 96 89Q108 74 97 44Z" fill={shade} stroke={INK} strokeWidth="3" /></g>;
+    if (config.hairStyle === "bun") return <g><circle cx="71" cy="16" r="16" fill={shade} stroke={INK} strokeWidth="3" /><path d="M40 61Q40 24 70 21Q101 24 101 63L96 88H44Z" fill={shade} stroke={INK} strokeWidth="3" /></g>;
+    return <path d="M40 62Q40 24 70 21Q101 24 101 65L96 92Q86 86 78 92Q69 86 61 92Q50 85 42 92Z" fill={shade} stroke={INK} strokeWidth="3" />;
+  }
   if (config.hairStyle === "long-curls") return <g fill={shade} stroke={INK} strokeWidth="2.7">{[[43,49],[39,66],[42,84],[53,98],[70,102],[88,98],[100,85],[102,66],[97,49]].map(([cx,cy],i)=><circle key={i} cx={cx} cy={cy} r="15" />)}</g>;
   if (config.hairStyle === "curls") return <g fill={shade} stroke={INK} strokeWidth="2.7">{[[43,49],[48,34],[62,27],[78,27],[93,36],[99,51],[96,67],[43,67]].map(([cx,cy],i)=><circle key={i} cx={cx} cy={cy} r="14" />)}</g>;
   if (config.hairStyle === "long-waves" || config.hairStyle === "medium-waves") return <path d="M39 60Q39 23 70 20Q102 23 102 62L106 101Q96 95 88 102Q78 95 69 103Q59 95 50 102Q43 96 35 101Q40 80 39 60Z" fill={shade} stroke={INK} strokeWidth="3" />;
@@ -20,8 +26,8 @@ function HairBack({ config, color }: { config: AvatarConfig; color: string }) {
 
 function HairFront({ config, color }: { config: AvatarConfig; color: string }) {
   const highlight = tone(color, "#f2c28a", 84);
-  if (config.accessory === "beanie") return <g><path d="M40 49Q43 12 70 10Q99 12 102 49Z" fill="currentColor" stroke={INK} strokeWidth="3.1" /><path d="M39 44Q70 35 103 44L101 57Q70 49 40 57Z" fill={tone("currentColor", "#1d1715", 76)} stroke={INK} strokeWidth="3" /><path d="M48 47V55M59 44V53M70 42V52M81 43V53M92 46V55" stroke={tone("currentColor", "#fff", 82)} strokeOpacity=".22" strokeWidth="1.7" /><path d="M47 54Q54 48 60 54" fill={color} stroke={INK} strokeWidth="2" /></g>;
-  if (config.accessory === "cap") return <g><path d="M39 48Q45 18 73 17Q96 19 103 47L99 58Q70 49 42 59Z" fill="currentColor" stroke={INK} strokeWidth="3.1" /><path d="M90 48Q115 47 121 58Q105 63 87 56Z" fill={tone("currentColor", "#171210", 75)} stroke={INK} strokeWidth="3" /><path d="M47 55Q53 49 61 55" fill={color} stroke={INK} strokeWidth="2" /></g>;
+  if (config.accessory === "beanie") return <g><path d="M42 51Q49 45 57 51L54 62Q47 64 42 57ZM92 50Q99 47 102 55L98 64Q92 60 92 50Z" fill={color} stroke={INK} strokeWidth="2.2" /><path d="M40 46Q43 11 70 9Q99 11 102 46Z" fill="currentColor" stroke={INK} strokeWidth="3.1" /><path d="M39 41Q70 33 103 41L101 53Q70 46 40 53Z" fill={tone("currentColor", "#1d1715", 76)} stroke={INK} strokeWidth="3" /><path d="M48 44V51M59 41V50M70 39V49M81 40V50M92 43V51" stroke={tone("currentColor", "#fff", 82)} strokeOpacity=".22" strokeWidth="1.7" /><path d="M43 51Q51 45 60 52M91 51Q97 47 102 52" fill={color} stroke={INK} strokeLinecap="round" strokeWidth="2.2" /></g>;
+  if (config.accessory === "cap") return <g><path d="M41 50Q49 44 58 51L54 63Q46 64 42 57ZM91 48Q99 46 103 54L98 64Q92 60 91 48Z" fill={color} stroke={INK} strokeWidth="2.3" /><path d="M39 45Q44 16 71 15Q95 16 103 42L100 52Q71 44 41 54Z" fill="currentColor" stroke={INK} strokeLinejoin="round" strokeWidth="3.1" /><path d="M82 43Q107 41 119 52Q104 58 81 52Z" fill={tone("currentColor", "#171210", 75)} stroke={INK} strokeLinejoin="round" strokeWidth="3" /><path d="M46 49Q55 42 64 48" fill="none" stroke={tone("currentColor", "#fff", 82)} strokeOpacity=".28" strokeWidth="2" /><path d="M42 52Q50 46 59 52M92 51Q98 47 103 52" fill={color} stroke={INK} strokeLinecap="round" strokeWidth="2.3" /></g>;
   let shape: React.ReactNode;
   if (config.hairStyle === "textured-crop") shape = <path d="M40 55L44 39L51 42L55 31L63 36L70 25L77 36L86 29L89 40L98 37L102 57Q87 46 74 47Q58 57 40 55Z" />;
   else if (config.hairStyle === "messy-short" || config.hairStyle === "undercut") shape = <path d="M39 56Q40 32 53 29L58 20L65 28L72 18L78 29L88 22L88 32Q99 36 102 57Q86 44 72 46Q56 57 39 56Z" />;
@@ -66,8 +72,8 @@ function Face({ config, skin, state }: { config: AvatarConfig; skin: string; sta
 }
 
 function Accessory({ config }: { config: AvatarConfig }) {
-  if (config.accessory === "round-glasses") return <g fill="none" stroke={INK} strokeWidth="2.8"><circle cx="57" cy="60" r="10" /><circle cx="83" cy="60" r="10" /><path d="M67 60Q70 58 73 60M47 58L42 57M93 58L98 57" /></g>;
-  if (config.accessory === "rectangle-glasses") return <g fill="none" stroke={INK} strokeWidth="2.8"><rect x="46" y="52" width="22" height="17" rx="5" /><rect x="72" y="52" width="22" height="17" rx="5" /><path d="M68 60Q70 58 72 60" /></g>;
+  if (config.accessory === "round-glasses") return <g fill="none" stroke={INK} strokeWidth="2.6"><circle cx="58" cy="60" r="9" /><circle cx="82" cy="60" r="9" /><path d="M67 60Q70 58 73 60M49 58L43 57M91 58L97 57" /></g>;
+  if (config.accessory === "rectangle-glasses") return <g fill="none" stroke={INK} strokeWidth="2.6"><rect x="47" y="53" width="20" height="16" rx="5" /><rect x="73" y="53" width="20" height="16" rx="5" /><path d="M67 60Q70 58 73 60" /></g>;
   if (config.accessory === "headband") return <path d="M43 48Q70 25 97 48" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="7" />;
   if (config.accessory === "earrings") return <><circle cx="41" cy="73" r="3.5" fill="#d8aa52" stroke={INK} strokeWidth="1.7" /><circle cx="99" cy="73" r="3.5" fill="#d8aa52" stroke={INK} strokeWidth="1.7" /></>;
   if (config.accessory === "hair-clip") return <path d="M91 44L100 38L103 48L94 50Z" fill="#efc768" stroke={INK} strokeWidth="1.8" />;
@@ -77,5 +83,5 @@ function Accessory({ config }: { config: AvatarConfig }) {
 
 export function SceneAvatar({ config, name, size = 82, state = "idle", active = false, className = "" }: SceneAvatarProps) {
   const { skin, hair, clothes } = resolveCharacterColors(config);
-  return <svg className={`scene-avatar character-avatar ${className}`} style={{ color: clothes }} width={size} height={size} viewBox="0 0 140 182" role="img" aria-label={`${name}'s character`} data-character={name} data-state={state} data-active={active}><ellipse cx="70" cy="179" rx="40" ry="5" fill="rgba(18,14,12,.22)" /><g className="character-rig"><HairBack config={config} color={hair} /><Body config={config} skin={skin} clothes={clothes} /><path d="M59 88V100Q70 108 81 100V88Z" fill={skin} stroke={INK} strokeWidth="2.8" /><Face config={config} skin={skin} state={state} /><HairFront config={config} color={hair} /><Accessory config={config} /><g className="character-state-mark" aria-hidden="true"><circle cx="111" cy="31" r="10" /><path d="M106 31L110 35L117 26" /></g></g></svg>;
+  return <svg className={`scene-avatar character-avatar ${className}`} style={{ color: clothes }} width={size} height={size} viewBox="0 0 140 182" role="img" aria-label={`${name}'s character`} data-character={name} data-state={state} data-active={active}><ellipse cx="70" cy="179" rx="40" ry="5" fill="rgba(18,14,12,.22)" /><g className="character-rig"><HairBack config={config} color={hair} /><path d="M59 87V101Q70 109 81 101V87Z" fill={skin} stroke={INK} strokeWidth="2.8" /><Body config={config} skin={skin} clothes={clothes} /><Face config={config} skin={skin} state={state} /><HairFront config={config} color={hair} /><Accessory config={config} /><g className="character-state-mark" aria-hidden="true"><circle cx="111" cy="31" r="10" /><path d="M106 31L110 35L117 26" /></g></g></svg>;
 }
