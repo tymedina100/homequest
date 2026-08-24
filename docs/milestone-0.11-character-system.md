@@ -2,13 +2,15 @@
 
 ## Art direction
 
-HomeQuest characters use a cozy storybook RPG language: warm flat color, dark hand-drawn-style outlines, modestly oversized heads, readable shoulders and clothing volume, short limbs, and chunky shoes. Faces stay expressive without anime-scale eyes. Small asymmetries, messy hair edges, layered collars, pockets, straps, and headwear integration keep the result personal rather than corporate or doll-like.
+HomeQuest characters use a cozy storybook RPG language: warm two-tone color, dark hand-drawn-style outlines, modestly oversized heads, readable shoulders and clothing volume, short limbs, articulated hands, and chunky shoes. Faces stay expressive without anime-scale eyes. Small asymmetries, messy hair edges, layered collars, pockets, straps, fabric seams, cheek shading, and headwear integration keep the result personal rather than corporate or doll-like.
 
 Variety comes from neutral visual primitives rather than a gender switch. Four face silhouettes, ten hair silhouettes, ten structurally distinct outfits, nine accessories, six skin tones, and multiple eyes, freckles, expressions, and colors naturally support masc-leaning, neutral, femme-leaning, and mixed outcomes.
 
 ## Renderer boundary
 
 `AvatarConfig` remains persisted identity. `StudioAvatar` interprets it as a detailed full-body portrait for Studio/Profile. `SceneAvatar` separately interprets it as a chunky, low-detail room inhabitant. A future Pixel renderer can consume the same stable semantic IDs without changing saves.
+
+The two SVGs intentionally do not share anatomy paths. Studio artwork retains facial highlights, garment construction, hair texture, hands, and secondary shading. Scene artwork redraws the same semantic choices with larger color blocks, fewer interior marks, heavier outlines, and an authored room scale. This keeps the mini character readable without shrinking the portrait renderer.
 
 ## Compatibility
 

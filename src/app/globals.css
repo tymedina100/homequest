@@ -208,10 +208,11 @@ main { margin-left: 236px; min-height: 100vh; padding: 36px clamp(28px, 4vw, 64p
 .player-switcher.compact button { border-radius:50%; display:flex; height:40px; justify-content:center; overflow:hidden; padding:1px; width:40px; }
 .player-switcher.compact button span,.player-switcher.compact button>svg:last-child { display:none; }
 .player-switcher.compact button .character-avatar { height:38px; width:32px; }
-.scene-characters { align-items:flex-end; bottom:24px; display:flex; gap:8px; left:50%; position:absolute; transform:translateX(-50%); z-index:7; }
+.scene-characters { align-items:flex-end; bottom:39px; display:flex; gap:10px; left:50%; position:absolute; transform:translateX(-50%); z-index:7; }
 .scene-characters>div { align-items:center; display:flex; flex-direction:column; opacity:.76; position:relative; transform:scale(.9); transition:.22s ease; }
 .scene-characters>div.active { filter:drop-shadow(0 0 8px rgba(244,198,112,.34)); opacity:1; transform:scale(1.06) translateY(-2px); }
-.scene-characters span,.kitchen-characters span { background:rgba(20,23,19,.78); border:1px solid rgba(255,255,255,.13); border-radius:99px; color:#f6eedf; font-size:8px; margin-top:-9px; padding:3px 7px; }
+.scene-characters span,.kitchen-characters span { display:none; }
+.scene-characters .scene-avatar { height:108px; width:84px; }
 .scene-action-cue,.zone-action-cue { animation:zone-cue-pop 1.35s ease-out; color:#ffe29b; filter:drop-shadow(0 0 7px rgba(255,221,139,.8)); font-size:25px; opacity:0; pointer-events:none; position:absolute; z-index:8; }
 .scene-action-cue { bottom:103px; left:58%; }.kitchen-cue.cue-sink { bottom:143px; left:42%; }.kitchen-cue.cue-stove { bottom:142px; right:22%; }.bathroom-cue.cue-sink { bottom:176px; left:38%; }.bathroom-cue.cue-toilet { bottom:150px; right:17%; }.bathroom-cue.cue-supplies { right:8%; top:135px; }
 @keyframes zone-cue-pop { 0%,100%{opacity:0;transform:translateY(8px) scale(.5)} 30%,62%{opacity:1;transform:translateY(-5px) scale(1.12)} }
@@ -248,8 +249,8 @@ main { margin-left: 236px; min-height: 100vh; padding: 36px clamp(28px, 4vw, 64p
   .character-lookbook>div { display:flex; margin:0 -12px; overflow-x:auto; padding:0 12px 8px; }.character-lookbook button { flex:0 0 96px; }
   .progress-tabs { overflow-x:auto; }
   .progress-tabs button { flex:0 0 auto; }
-  .scene-characters { bottom:25px; left:53%; }
-  .scene-characters .character-avatar { height:79px; width:63px; }
+  .scene-characters { bottom:36px; left:52%; }
+  .scene-characters .character-avatar { height:88px; width:68px; }
 }
 
 .onboarding-shell { align-items:center; background:radial-gradient(circle at 50% 0%,rgba(207,166,89,.16),transparent 36%),var(--bg); display:flex; justify-content:center; min-height:100vh; padding:28px 18px; }
@@ -341,6 +342,6 @@ main { margin-left: 236px; min-height: 100vh; padding: 36px clamp(28px, 4vw, 64p
 .zone-reward-line { align-items:center; color:var(--gold-light); display:flex; flex-wrap:wrap; font-size:10px; gap:6px; grid-column:2; }.zone-reward-line small { color:var(--muted); margin-left:4px; text-transform:capitalize; }.reward-divider{color:var(--dim)}
 
 /* Character System 2.0 scene-scale overrides intentionally sit after legacy Zone rules. */
-.kitchen-characters { bottom:34px; gap:8px; }.kitchen-characters>div,.bathroom-characters>div { transition:.2s ease; }.kitchen-characters>div.active,.bathroom-characters>div.active { filter:drop-shadow(0 0 8px rgba(244,198,112,.32)); transform:scale(1.05) translateY(-2px); }
-.kitchen-characters .scene-avatar { height:92px; width:73px; }.bathroom-characters { bottom:24px; gap:8px; }.bathroom-characters .scene-avatar { height:84px; width:67px; }
-@media (max-width:720px) { .kitchen-characters { bottom:27px; }.kitchen-characters .character-avatar,.kitchen-characters .scene-avatar,.bathroom-characters .scene-avatar { height:78px; width:62px; } }
+.kitchen-characters { bottom:47px; gap:10px; }.kitchen-characters>div,.bathroom-characters>div { transition:.2s ease; }.kitchen-characters>div.active,.bathroom-characters>div.active { filter:drop-shadow(0 0 8px rgba(244,198,112,.32)); transform:scale(1.05) translateY(-2px); }
+.kitchen-characters .scene-avatar { height:126px; width:98px; }.bathroom-characters { bottom:41px; gap:10px; }.bathroom-characters .scene-avatar { height:116px; width:90px; }
+@media (max-width:720px) { .kitchen-characters { bottom:38px; }.bathroom-characters { bottom:34px; }.kitchen-characters .character-avatar,.kitchen-characters .scene-avatar,.bathroom-characters .scene-avatar { height:92px; width:71px; } }

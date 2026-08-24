@@ -1,87 +1,94 @@
 import { isHeadwear, resolveCharacterColors } from "@/domain/avatar";
 import type { AvatarConfig, CharacterAnimationState } from "@/domain/types";
 
-type StudioAvatarProps = {
-  config: AvatarConfig;
-  name: string;
-  size?: number;
-  className?: string;
-  state?: CharacterAnimationState;
-  active?: boolean;
-};
+type StudioAvatarProps = { config: AvatarConfig; name: string; size?: number; className?: string; state?: CharacterAnimationState; active?: boolean };
+
+const INK = "#34251f";
+const SOFT_INK = "#5a382e";
+const CREAM = "#f5ead5";
+const tone = (color: string, mix: string, amount: number) => `color-mix(in srgb, ${color} ${amount}%, ${mix})`;
 
 function HairBack({ config, color }: { config: AvatarConfig; color: string }) {
-  if (isHeadwear(config.accessory)) return <path d="M73 92Q70 31 120 28Q171 31 167 94L157 127H83Z" fill={color} />;
+  const shade = tone(color, "#160f0d", 72);
+  if (isHeadwear(config.accessory)) return <path className="studio-hair-back" d="M79 76Q79 30 120 27Q162 30 163 78L157 116Q144 108 133 116Q120 109 107 116Q94 108 82 115Z" fill={shade} stroke={INK} strokeWidth="3.2" />;
   switch (config.hairStyle) {
-    case "long-curls": return <g fill={color}>{[[78,69],[75,91],[78,114],[91,129],[149,129],[163,112],[165,88],[158,65]].map(([cx, cy], index) => <circle key={index} cx={cx} cy={cy} r="22" />)}</g>;
-    case "long-waves": return <path d="M75 75Q72 28 120 26Q171 28 166 82L172 138Q153 130 144 139Q126 129 109 139Q91 128 70 138Q79 107 75 75Z" fill={color} />;
-    case "ponytail": return <><path d="M77 75Q75 30 120 27Q166 30 163 78L155 106H83Z" fill={color} /><path d="M157 65Q190 72 178 121Q166 142 151 125Q171 104 157 65Z" fill={color} /></>;
-    case "bun": return <><circle cx="122" cy="20" r="24" fill={color} /><path d="M76 78Q74 31 120 28Q167 31 164 80L155 105H83Z" fill={color} /></>;
-    case "medium-waves": return <path d="M76 77Q73 30 120 27Q169 30 165 82L157 115Q145 105 136 116Q121 105 107 116Q94 105 81 113Z" fill={color} />;
-    case "curls": return <g fill={color}>{[[83,65],[91,43],[112,34],[135,36],[155,49],[163,71],[157,94],[82,93]].map(([cx, cy], index) => <circle key={index} cx={cx} cy={cy} r="20" />)}</g>;
+    case "long-curls": return <g className="studio-hair-back" fill={shade} stroke={INK} strokeWidth="3">{[[82,64,21],[76,87,22],[78,112,21],[91,132,21],[112,140,20],[137,137,21],[157,122,21],[166,98,21],[163,74,21]].map(([cx, cy, r], index) => <circle key={index} cx={cx} cy={cy} r={r} />)}<path d="M76 91Q91 79 88 112M158 84Q143 100 154 119M101 126Q111 116 119 137" fill="none" stroke={tone(color, "#fff3d9", 80)} strokeOpacity=".2" strokeWidth="3" /></g>;
+    case "long-waves": return <g className="studio-hair-back"><path d="M77 75Q75 29 120 26Q166 29 165 78L172 147Q158 139 146 147Q132 137 119 148Q104 137 89 147Q80 138 68 145Q77 109 77 75Z" fill={shade} stroke={INK} strokeWidth="3.2" /><path d="M82 83Q91 108 79 133M158 82Q149 111 162 136" fill="none" stroke={tone(color, "#fff3d9", 80)} strokeOpacity=".18" strokeWidth="4" /></g>;
+    case "ponytail": return <g className="studio-hair-back"><path d="M78 77Q77 31 120 27Q164 31 163 78L156 111H84Z" fill={shade} stroke={INK} strokeWidth="3.2" /><path d="M156 58Q187 62 181 105Q178 130 157 137Q145 127 153 114Q170 96 156 58Z" fill={shade} stroke={INK} strokeWidth="3.2" /><path d="M160 73Q176 92 160 119" fill="none" stroke={tone(color, "#fff3d9", 80)} strokeOpacity=".18" strokeWidth="3" /></g>;
+    case "bun": return <g className="studio-hair-back"><circle cx="122" cy="20" r="24" fill={shade} stroke={INK} strokeWidth="3.2" /><path d="M79 78Q78 31 120 27Q164 31 162 80L155 109H84Z" fill={shade} stroke={INK} strokeWidth="3.2" /><path d="M108 15Q123 5 137 19M113 28Q127 17 141 29" fill="none" stroke={tone(color, "#fff3d9", 80)} strokeOpacity=".16" strokeWidth="3" /></g>;
+    case "medium-waves": return <path className="studio-hair-back" d="M78 78Q76 30 120 27Q166 31 164 83L159 113Q146 105 135 115Q121 106 108 115Q95 106 82 113Z" fill={shade} stroke={INK} strokeWidth="3.2" />;
+    case "curls": return <g className="studio-hair-back" fill={shade} stroke={INK} strokeWidth="3">{[[82,64],[89,44],[108,34],[130,34],[150,45],[160,64],[160,86],[82,87]].map(([cx, cy], index) => <circle key={index} cx={cx} cy={cy} r="19" />)}</g>;
     default: return null;
   }
 }
 
 function HairFront({ config, color }: { config: AvatarConfig; color: string }) {
-  if (config.accessory === "beanie") return <><path d="M80 57Q84 12 120 10Q158 12 163 57Z" fill={color} /><path d="M80 51Q120 39 163 51L161 68Q120 57 82 68Z" fill={color} opacity=".75" /></>;
-  if (config.accessory === "cap") return <><path d="M78 54Q89 18 126 20Q155 22 164 53L158 65Q121 53 82 66Z" fill="currentColor" /><path d="M145 55Q177 55 184 68Q162 71 139 64Z" fill="currentColor" /></>;
+  const light = tone(color, "#f4c98e", 83);
+  const texture = <path d="M94 43Q101 35 109 34M116 35Q123 27 132 34M137 38Q145 34 151 44" fill="none" stroke={light} strokeLinecap="round" strokeOpacity=".3" strokeWidth="3" />;
+  if (config.accessory === "beanie") return <g className="studio-headwear"><path d="M80 59Q82 14 120 11Q159 14 162 59Z" fill={tone("currentColor", "#30251f", 80)} stroke={INK} strokeWidth="3.4" /><path d="M79 52Q120 42 163 52L161 69Q120 59 81 69Z" fill="currentColor" stroke={INK} strokeWidth="3.2" /><path d="M90 55V66M102 52V64M115 51V63M128 51V63M141 52V65M153 54V66" stroke={tone("currentColor", "#fff", 82)} strokeOpacity=".22" strokeWidth="2" /><path d="M88 66Q95 58 104 65" fill={color} stroke={INK} strokeWidth="2.6" /></g>;
+  if (config.accessory === "cap") return <g className="studio-headwear"><path d="M78 57Q85 20 123 19Q153 21 164 54L158 67Q122 55 82 68Z" fill="currentColor" stroke={INK} strokeLinejoin="round" strokeWidth="3.5" /><path d="M143 55Q175 53 184 67Q167 73 139 65Z" fill={tone("currentColor", "#15110f", 76)} stroke={INK} strokeLinejoin="round" strokeWidth="3.3" /><path d="M91 57Q103 48 116 53" fill="none" stroke={tone("currentColor", "#fff", 78)} strokeOpacity=".3" strokeWidth="3" /><path d="M88 65Q96 57 105 65" fill={color} stroke={INK} strokeWidth="2.5" /></g>;
+  let shape: React.ReactNode;
   switch (config.hairStyle) {
-    case "textured-crop": return <path d="M79 65L85 43L95 47L101 34L111 40L120 29L130 40L141 34L147 47L160 43L163 69Q145 56 128 57Q105 67 79 65Z" fill={color} />;
-    case "side-part": return <path d="M78 68Q79 31 119 28Q156 29 164 66Q142 48 119 48Q99 63 78 68Z" fill={color} />;
-    case "messy-short": return <path d="M78 67Q78 34 99 31L104 19L115 29L125 16L132 31L147 22L146 37Q161 42 164 69Q143 51 124 54Q103 66 78 67Z" fill={color} />;
-    case "medium-waves": case "long-waves": return <path d="M78 67Q81 29 120 27Q159 29 164 67Q150 56 143 44Q129 59 113 46Q100 61 78 67Z" fill={color} />;
-    case "curls": case "long-curls": return <g fill={color}>{[[83,61],[91,43],[108,35],[126,34],[145,42],[158,59]].map(([cx, cy], index) => <circle key={index} cx={cx} cy={cy} r="17" />)}</g>;
-    case "ponytail": return <path d="M79 66Q81 30 120 27Q158 30 162 66Q145 55 135 43Q120 58 106 46Q95 60 79 66Z" fill={color} />;
-    case "bun": return <path d="M79 66Q82 30 120 27Q158 30 162 66Q145 55 134 44Q120 57 106 45Q94 59 79 66Z" fill={color} />;
-    case "undercut": return <><path d="M79 68Q78 39 95 35L102 22L112 31L123 18L132 32L146 24L145 39Q161 46 163 68Q140 51 116 53Q99 63 79 68Z" fill={color} /><path d="M80 63Q83 83 91 91" stroke={color} strokeWidth="8" /></>;
+    case "textured-crop": shape = <path d="M78 67L84 45L94 48L100 34L110 40L119 27L130 40L141 32L147 46L159 42L163 70Q145 56 129 57Q107 68 78 67Z" />; break;
+    case "side-part": shape = <path d="M78 69Q79 31 119 28Q155 29 163 65Q142 46 120 47Q101 63 78 69Z" />; break;
+    case "messy-short": shape = <path d="M77 68Q77 35 98 31L103 18L114 29L124 15L132 31L147 21L146 37Q160 42 164 69Q144 52 125 54Q103 67 77 68Z" />; break;
+    case "medium-waves": case "long-waves": shape = <path d="M78 68Q81 29 120 27Q159 29 164 68Q151 57 143 44Q130 60 113 46Q101 62 78 68Z" />; break;
+    case "curls": case "long-curls": shape = <g>{[[83,61],[91,43],[108,35],[127,34],[145,42],[158,59]].map(([cx, cy], index) => <circle key={index} cx={cx} cy={cy} r="17" />)}</g>; break;
+    case "ponytail": case "bun": shape = <path d="M79 67Q81 30 120 27Q158 30 162 67Q146 55 135 43Q121 59 106 46Q95 61 79 67Z" />; break;
+    case "undercut": shape = <g><path d="M78 68Q78 40 94 35L101 21L112 31L123 17L132 32L146 23L145 39Q160 45 163 67Q140 52 117 53Q99 64 78 68Z" /><path d="M80 64Q81 78 88 90" fill="none" stroke={color} strokeWidth="8" /></g>; break;
   }
+  return <g className="studio-hair-front" fill={color} stroke={INK} strokeLinejoin="round" strokeWidth="3.2">{shape}{texture}</g>;
+}
+
+function LegsAndShoes({ config, clothes }: { config: AvatarConfig; clothes: string }) {
+  const pants = config.outfit === "overalls" ? "#42677a" : config.outfit === "lounge" ? tone(clothes, "#30272a", 72) : "#343638";
+  return <g className="studio-legs"><path d="M86 224Q103 219 119 226L116 286H84Q81 259 86 224Z" fill={pants} stroke={INK} strokeLinejoin="round" strokeWidth="3.4" /><path d="M121 226Q138 219 154 224Q160 258 156 286H124Z" fill={pants} stroke={INK} strokeLinejoin="round" strokeWidth="3.4" /><path d="M89 247H114M126 247H152" stroke={tone(pants, "#fff", 82)} strokeOpacity=".14" strokeWidth="3" /><path d="M80 282Q98 277 117 284L119 297H78Q75 289 80 282Z" fill={CREAM} stroke={INK} strokeLinejoin="round" strokeWidth="3.5" /><path d="M123 284Q142 277 160 282Q165 289 162 297H121Z" fill={CREAM} stroke={INK} strokeLinejoin="round" strokeWidth="3.5" /><path d="M82 289H114M126 290H159" stroke="#b49f82" strokeWidth="2.2" /></g>;
 }
 
 function Outfit({ config, skin, clothes }: { config: AvatarConfig; skin: string; clothes: string }) {
-  const dark = "#302927";
-  const base = <path d="M71 272Q72 192 88 165Q102 153 120 153Q139 153 152 165Q169 193 170 272Z" fill={clothes} />;
-  return <g className={`studio-outfit outfit-${config.outfit}`}>
-    {base}
-    {config.outfit === "tee" && <><path d="M72 192Q58 202 55 232L74 236L83 195Z" fill={clothes} /><path d="M168 192Q182 202 185 232L166 236L157 195Z" fill={clothes} /><circle cx="63" cy="235" r="9" fill={skin} /><circle cx="177" cy="235" r="9" fill={skin} /></>}
-    {config.outfit === "crewneck" && <><path d="M72 183Q57 191 55 236L78 239L86 190Z" fill={clothes} /><path d="M168 183Q183 191 185 236L162 239L154 190Z" fill={clothes} /><path d="M100 162Q120 179 140 162" fill="none" stroke="#f1ddba" strokeOpacity=".45" strokeWidth="5" /></>}
-    {config.outfit === "hoodie" && <><path d="M78 180Q55 188 54 244L82 246L88 188Z" fill={clothes} /><path d="M162 180Q185 188 186 244L158 246L152 188Z" fill={clothes} /><path d="M88 167Q120 145 152 167Q145 186 120 188Q95 186 88 167Z" fill="#251f1c" opacity=".28" /><path d="M112 174V205M128 174V205" stroke="#eee0c5" strokeWidth="3" /><path d="M91 226Q120 213 149 226V251H91Z" fill="#251f1c" opacity=".17" /></>}
-    {config.outfit === "oversized-sweater" && <><path d="M78 177Q51 184 49 249Q64 258 85 246L91 191Z" fill={clothes} /><path d="M162 177Q189 184 191 249Q176 258 155 246L149 191Z" fill={clothes} /><path d="M81 254Q120 266 159 254" stroke="#f2dec0" strokeOpacity=".25" strokeWidth="6" /></>}
-    {config.outfit === "jacket" && <><path d="M70 181Q56 193 58 252L91 260L102 169Z" fill="#322d29" /><path d="M170 181Q184 193 182 252L149 260L138 169Z" fill="#322d29" /><path d="M104 164L120 191L136 164" fill="#e9d8bb" opacity=".8" /><path d="M120 190V270" stroke="#c2a471" strokeWidth="3" /></>}
-    {config.outfit === "flannel" && <><path d="M70 181Q55 194 57 252L91 260L102 169Z" fill={clothes} /><path d="M170 181Q185 194 183 252L149 260L138 169Z" fill={clothes} /><path d="M73 205H98M66 229H94M142 205H167M146 229H175M120 180V270" stroke="#f4d6ad" strokeOpacity=".42" strokeWidth="4" /><path d="M100 164L120 187L140 164" fill="#e7d8bf" /></>}
-    {config.outfit === "overalls" && <><path d="M85 160H155L163 272H77Z" fill="#4f7180" /><path d="M92 161L99 215M148 161L141 215" stroke="#d4aa65" strokeWidth="9" /><path d="M96 191H144V246H96Z" fill="#567f92" /><path d="M106 208H134V229H106Z" fill="#406373" /></>}
-    {config.outfit === "apron" && <><path d="M86 158Q120 174 154 158L162 272H78Z" fill="#ead9b9" /><path d="M96 158Q120 185 144 158" fill="none" stroke={clothes} strokeWidth="8" /><path d="M93 226H147V250Q120 259 93 250Z" fill={clothes} opacity=".42" /></>}
-    {config.outfit === "button-up" && <><path d="M99 161L120 182L141 161" fill="#efe0c7" /><path d="M120 180V271" stroke="#3b302d" strokeOpacity=".4" strokeWidth="3" />{[200,220,240].map((cy) => <circle key={cy} cx="120" cy={cy} r="3" fill="#e8d6b6" />)}</>}
-    {config.outfit === "lounge" && <><path d="M76 184Q55 194 57 244L84 248L91 191Z" fill={clothes} /><path d="M164 184Q185 194 183 244L156 248L149 191Z" fill={clothes} /><path d="M91 205Q120 216 149 205M92 229Q120 240 148 229" stroke="#f1ddba" strokeOpacity=".35" strokeWidth="5" /></>}
-    <path d="M88 272L85 291H116L119 272M121 272L124 291H155L152 272" fill={dark} />
-    <path d="M82 286Q99 281 118 288V298H81Q78 293 82 286ZM122 288Q141 281 158 286Q162 293 159 298H122Z" fill="#eee5d6" stroke="#403834" strokeWidth="3" />
-  </g>;
+  const shade = tone(clothes, "#251c19", 72);
+  const light = tone(clothes, "#fff1d3", 82);
+  const skinShade = tone(skin, "#8a4c37", 78);
+  const shortSleeve = config.outfit === "tee" || config.outfit === "overalls";
+  const sleeve = config.outfit === "overalls" ? "#e4d1af" : config.outfit === "jacket" ? "#343739" : config.outfit === "button-up" ? light : clothes;
+  const leftArm = shortSleeve ? <><path className="character-arm-left" d="M88 158Q70 160 65 180L61 196L78 201L85 175Z" fill={sleeve} stroke={INK} strokeWidth="3.5" /><path d="M62 194L57 222Q61 230 69 226L78 200Z" fill={skin} stroke={INK} strokeWidth="3.2" /></> : <path className="character-arm-left" d="M88 157Q68 160 60 181L53 224Q58 232 68 227L81 192Z" fill={sleeve} stroke={INK} strokeLinejoin="round" strokeWidth="3.5" />;
+  const rightArm = shortSleeve ? <><path className="character-arm-right" d="M152 158Q170 160 175 180L179 196L162 201L155 175Z" fill={sleeve} stroke={INK} strokeWidth="3.5" /><path d="M178 194L183 222Q179 230 171 226L162 200Z" fill={skin} stroke={INK} strokeWidth="3.2" /></> : <path className="character-arm-right" d="M152 157Q172 160 180 181L187 224Q182 232 172 227L159 192Z" fill={sleeve} stroke={INK} strokeLinejoin="round" strokeWidth="3.5" />;
+  const hands = !shortSleeve && <g className="studio-hands" fill={skin} stroke={INK} strokeWidth="3"><path d="M52 218Q47 221 49 229Q52 238 60 237Q67 237 69 226Z" /><path d="M188 218Q193 221 191 229Q188 238 180 237Q173 237 171 226Z" /><path d="M54 226L57 232M186 226L183 232" stroke={skinShade} strokeLinecap="round" strokeWidth="1.8" /></g>;
+  let torso: React.ReactNode;
+  switch (config.outfit) {
+    case "tee": torso = <g><path d="M89 151Q120 142 151 151L164 181L153 188L151 229Q120 237 89 229L88 188L76 181Z" fill={clothes} stroke={INK} strokeLinejoin="round" strokeWidth="3.5" /><path d="M105 151Q120 166 135 151" fill={skin} stroke={INK} strokeWidth="3" /></g>; break;
+    case "crewneck": torso = <g><path d="M87 151Q120 141 153 151L163 184L153 194L157 231Q120 239 83 231L87 194L77 184Z" fill={clothes} stroke={INK} strokeLinejoin="round" strokeWidth="3.5" /><path d="M102 150Q120 168 138 150" fill="none" stroke={light} strokeOpacity=".55" strokeWidth="5" /><path d="M89 224Q120 231 153 224" fill="none" stroke={shade} strokeWidth="5" /></g>; break;
+    case "hoodie": torso = <g><path d="M84 153Q120 137 156 153L166 184L156 199L158 234Q120 243 82 234L84 199L74 184Z" fill={clothes} stroke={INK} strokeLinejoin="round" strokeWidth="3.7" /><path d="M92 153Q120 135 148 153Q144 174 120 178Q96 174 92 153Z" fill={shade} stroke={INK} strokeWidth="3" /><path d="M110 169V196M130 169V196" stroke={CREAM} strokeLinecap="round" strokeWidth="3" /><circle cx="110" cy="197" r="3" fill={CREAM} /><circle cx="130" cy="197" r="3" fill={CREAM} /><path d="M91 210Q120 198 149 210V232Q120 240 91 232Z" fill={shade} stroke={INK} strokeWidth="2.5" /></g>; break;
+    case "oversized-sweater": torso = <g><path d="M80 151Q120 140 160 151L171 187L159 203L164 239Q120 249 76 239L81 203L69 187Z" fill={clothes} stroke={INK} strokeLinejoin="round" strokeWidth="3.7" /><path d="M101 150Q120 168 139 150" fill="none" stroke={light} strokeOpacity=".48" strokeWidth="6" /><path d="M82 226Q120 238 158 226M77 236Q120 247 163 236" fill="none" stroke={shade} strokeWidth="4" /></g>; break;
+    case "jacket": torso = <g><path d="M86 151Q120 141 154 151L164 185L155 232Q138 238 120 233Q102 238 85 232L76 185Z" fill="#343739" stroke={INK} strokeLinejoin="round" strokeWidth="3.7" /><path d="M102 150L120 178L138 150L147 229Q134 235 120 231Q106 235 93 229Z" fill={clothes} stroke={INK} strokeLinejoin="round" strokeWidth="3" /><path d="M102 150L94 178L111 174M138 150L146 178L129 174" fill={CREAM} stroke={INK} strokeLinejoin="round" strokeWidth="2.8" /><path d="M120 178V232" stroke="#cfa862" strokeWidth="2.5" /><circle cx="130" cy="196" r="3" fill="#cfa862" /></g>; break;
+    case "flannel": torso = <g><path d="M84 151Q120 140 156 151L166 185L156 234Q138 239 120 233Q102 239 84 234L74 185Z" fill={clothes} stroke={INK} strokeLinejoin="round" strokeWidth="3.7" /><path d="M101 150L120 176L139 150L146 231Q133 236 120 232Q107 236 94 231Z" fill="#d8c6a5" stroke={INK} strokeWidth="2.7" /><path d="M83 181H103M77 204H99M137 181H157M141 204H163M120 176V232" stroke={light} strokeOpacity=".55" strokeWidth="3" /><path d="M91 155V229M149 155V229" stroke={shade} strokeOpacity=".65" strokeWidth="3" /></g>; break;
+    case "overalls": torso = <g><path d="M89 151Q120 141 151 151L159 183L152 228Q120 237 88 228L81 183Z" fill="#e4d1af" stroke={INK} strokeWidth="3.5" /><path d="M92 164L102 157L106 181H134L138 157L148 164L153 231Q120 239 87 231Z" fill="#4c778c" stroke={INK} strokeLinejoin="round" strokeWidth="3.2" /><circle cx="104" cy="177" r="3" fill="#d8aa61" /><circle cx="136" cy="177" r="3" fill="#d8aa61" /><path d="M104 181H136V216H104Z" fill="#567f92" stroke={INK} strokeWidth="2.7" /><path d="M112 194H128V208H112Z" fill="#3f6678" /></g>; break;
+    case "apron": torso = <g><path d="M86 151Q120 141 154 151L164 185L154 232Q120 239 86 232L76 185Z" fill={clothes} stroke={INK} strokeWidth="3.6" /><path d="M101 150Q120 168 139 150" fill={CREAM} stroke={INK} strokeWidth="2.8" /><path d="M98 155Q120 175 142 155L151 237Q120 245 89 237Z" fill="#ead9b9" stroke={INK} strokeWidth="3" /><path d="M99 210H141V229Q120 237 99 229Z" fill={tone(clothes, "#ead9b9", 45)} stroke={INK} strokeWidth="2.5" /></g>; break;
+    case "button-up": torso = <g><path d="M86 151Q120 141 154 151L163 184L154 233Q120 240 86 233L77 184Z" fill={clothes} stroke={INK} strokeWidth="3.6" /><path d="M101 149L120 174L139 149L146 232Q133 236 120 233Q107 236 94 232Z" fill={light} stroke={INK} strokeWidth="2.8" /><path d="M102 151L111 169L120 174L129 169L138 151" fill={CREAM} stroke={INK} strokeLinejoin="round" strokeWidth="2.4" /><path d="M120 174V233" stroke={SOFT_INK} strokeWidth="2" />{[188,204,220].map((cy) => <circle key={cy} cx="120" cy={cy} r="2.4" fill={SOFT_INK} />)}</g>; break;
+    case "lounge": torso = <g><path d="M82 151Q120 139 158 151L168 185L157 236Q120 244 83 236L72 185Z" fill={clothes} stroke={INK} strokeWidth="3.6" /><path d="M100 150Q120 170 140 150" fill="none" stroke={light} strokeOpacity=".52" strokeWidth="6" /><path d="M89 184Q120 196 151 184M86 207Q120 219 154 207" fill="none" stroke={light} strokeOpacity=".38" strokeWidth="4" /></g>; break;
+  }
+  return <g className={`studio-outfit outfit-${config.outfit}`}><LegsAndShoes config={config} clothes={clothes} />{leftArm}{rightArm}{torso}{hands}</g>;
 }
 
 function Face({ config, skin }: { config: AvatarConfig; skin: string }) {
-  const head = config.faceShape === "angular" ? "M81 76Q82 37 120 35Q159 37 160 77Q158 116 120 136Q82 116 81 76Z" : config.faceShape === "oval" ? "M82 76Q82 35 120 35Q158 35 158 78Q156 129 120 137Q84 128 82 76Z" : config.faceShape === "soft" ? "M79 76Q80 37 120 35Q161 37 161 78Q158 124 120 136Q82 124 79 76Z" : "M78 78Q78 37 120 35Q162 37 162 78Q158 126 120 136Q82 126 78 78Z";
+  const shade = tone(skin, "#884a39", 82);
+  const light = tone(skin, "#fff4df", 84);
+  const head = config.faceShape === "angular" ? "M82 76Q83 37 120 34Q157 37 159 77Q156 111 140 125Q128 137 120 139Q111 137 99 127Q84 114 82 76Z" : config.faceShape === "oval" ? "M83 74Q84 34 120 33Q156 34 157 76Q155 126 120 138Q85 126 83 74Z" : config.faceShape === "soft" ? "M80 75Q81 36 120 33Q159 36 160 77Q158 119 120 137Q82 119 80 75Z" : "M79 76Q80 36 120 33Q160 36 161 77Q158 123 120 137Q82 123 79 76Z";
   const sleepy = config.expression === "sleepy";
   const excited = config.expression === "excited";
   const focused = config.expression === "focused" || config.expression === "determined";
-  const eyePath = config.eyeStyle === "almond" ? "M95 82Q103 76 111 82Q103 88 95 82ZM129 82Q137 76 145 82Q137 88 129 82Z" : config.eyeStyle === "bright" ? "M96 82Q103 73 110 82Q103 91 96 82ZM130 82Q137 73 144 82Q137 91 130 82Z" : "M96 83Q103 77 110 83M130 83Q137 77 144 83";
-  return <g className="studio-face">
-    <path d={head} fill={skin} stroke="#4a3028" strokeWidth="3" />
-    <circle cx="79" cy="84" r="8" fill={skin} /><circle cx="161" cy="84" r="8" fill={skin} />
-    <path d={focused ? "M94 69L110 73M146 69L130 73" : "M95 72Q103 68 111 72M129 72Q137 68 145 72"} stroke="#4a3028" strokeWidth="3" fill="none" strokeLinecap="round" />
-    {sleepy ? <path d="M96 83Q103 88 110 83M130 83Q137 88 144 83" stroke="#392725" strokeWidth="3" fill="none" /> : <path d={eyePath} stroke="#392725" strokeWidth="3" fill={config.eyeStyle === "calm" ? "none" : "#392725"} strokeLinecap="round" />}
-    {config.freckles === "soft" && <g fill="#9a5c48" opacity=".55">{[93,99,105,135,141,147].map((cx) => <circle key={cx} cx={cx} cy="96" r="1.5" />)}</g>}
-    <path d={excited ? "M105 106Q120 125 135 106Q120 132 105 106Z" : config.expression === "bright" ? "M104 106Q120 122 136 106" : focused ? "M107 112Q120 108 133 112" : sleepy ? "M108 113Q120 107 132 113" : "M107 108Q120 119 133 108"} stroke="#8a4949" strokeWidth="3" fill={excited ? "#7b3c3d" : "none"} strokeLinecap="round" />
-  </g>;
+  const eyeWidth = config.eyeStyle === "almond" ? 15 : config.eyeStyle === "bright" ? 14 : 13;
+  return <g className="studio-face"><path d={head} fill={skin} stroke={INK} strokeLinejoin="round" strokeWidth="3.5" /><path d="M89 106Q100 128 120 134Q91 125 84 99Z" fill={shade} opacity=".22" /><path d="M86 65Q96 43 121 40" fill="none" stroke={light} strokeLinecap="round" strokeOpacity=".25" strokeWidth="5" /><path d="M81 78Q70 78 72 90Q74 100 83 96M159 78Q170 78 168 90Q166 100 157 96" fill={skin} stroke={INK} strokeWidth="3.1" /><path d="M76 87Q80 84 82 91M164 87Q160 84 158 91" fill="none" stroke={shade} strokeLinecap="round" strokeWidth="2" /><path d={focused ? "M93 68L108 72M147 68L132 72" : "M93 70Q101 65 109 69M131 69Q139 65 147 70"} fill="none" stroke={INK} strokeLinecap="round" strokeWidth="3.2" />{sleepy ? <path d="M94 82Q102 88 110 82M130 82Q138 88 146 82" fill="none" stroke={INK} strokeLinecap="round" strokeWidth="3" /> : <g><path d={`M${102-eyeWidth/2} 78Q102 73 ${102+eyeWidth/2} 78Q102 90 ${102-eyeWidth/2} 78ZM${138-eyeWidth/2} 78Q138 73 ${138+eyeWidth/2} 78Q138 90 ${138-eyeWidth/2} 78Z`} fill="#fff9eb" stroke={INK} strokeLinejoin="round" strokeWidth="2.4" /><circle cx="103" cy="81" r={config.eyeStyle === "bright" ? 4 : 3.5} fill="#33241f" /><circle cx="137" cy="81" r={config.eyeStyle === "bright" ? 4 : 3.5} fill="#33241f" /><circle cx="104" cy="79.5" r="1.1" fill="#fff8df" /><circle cx="138" cy="79.5" r="1.1" fill="#fff8df" /></g>}<path d="M120 84Q116 94 121 96Q125 97 128 94" fill="none" stroke={shade} strokeLinecap="round" strokeWidth="2.2" /><ellipse cx="92" cy="100" rx="7" ry="3.5" fill="#c76d67" opacity=".18" /><ellipse cx="148" cy="100" rx="7" ry="3.5" fill="#c76d67" opacity=".18" />{config.freckles === "soft" && <g fill="#8d5140" opacity=".58">{[91,97,103,137,143,149].map((cx, index) => <circle key={cx} cx={cx} cy={index < 3 ? 98 + index % 2 : 99 - index % 2} r="1.5" />)}</g>}<path d={excited ? "M104 106Q120 128 136 106Q120 134 104 106Z" : config.expression === "bright" ? "M103 107Q120 123 137 107" : focused ? "M107 114Q120 108 133 114" : sleepy ? "M109 113Q120 108 131 113" : "M105 109Q120 120 135 109"} fill={excited ? "#7b3f3e" : "none"} stroke="#8e4948" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />{excited && <path d="M110 113Q120 119 130 113" stroke="#f8d8c4" strokeWidth="2" />}</g>;
 }
 
 function Accessory({ config, clothes }: { config: AvatarConfig; clothes: string }) {
   switch (config.accessory) {
-    case "round-glasses": return <g fill="none" stroke="#423735" strokeWidth="4"><circle cx="103" cy="83" r="13" /><circle cx="137" cy="83" r="13" /><path d="M116 83H124" /></g>;
-    case "rectangle-glasses": return <g fill="none" stroke="#423735" strokeWidth="4"><rect x="89" y="72" width="27" height="21" rx="6" /><rect x="124" y="72" width="27" height="21" rx="6" /><path d="M116 82H124" /></g>;
-    case "earrings": return <><circle cx="78" cy="96" r="5" fill="#d5ad55" /><circle cx="162" cy="96" r="5" fill="#d5ad55" /></>;
-    case "headband": return <path d="M82 57Q120 28 159 57" fill="none" stroke={clothes} strokeWidth="8" />;
-    case "necklace": return <><path d="M103 153Q120 174 137 153" stroke="#d5ad55" strokeWidth="3" fill="none" /><circle cx="120" cy="169" r="4" fill="#d5ad55" /></>;
-    case "hair-clip": return <path d="M150 58L162 50L166 63Z" fill="#edc568" stroke="#4b352e" strokeWidth="2" />;
+    case "round-glasses": return <g className="studio-accessory" fill="none" stroke={INK} strokeWidth="3.6"><circle cx="102" cy="82" r="14" /><circle cx="138" cy="82" r="14" /><path d="M116 82Q120 79 124 82M88 80L81 78M152 80L159 78" /><path d="M94 75Q99 71 104 72M130 75Q135 71 140 72" stroke="#fff" strokeOpacity=".28" strokeWidth="2" /></g>;
+    case "rectangle-glasses": return <g className="studio-accessory" fill="none" stroke={INK} strokeWidth="3.5"><rect x="87" y="71" width="29" height="22" rx="6" /><rect x="124" y="71" width="29" height="22" rx="6" /><path d="M116 81Q120 78 124 81M87 78L80 76M153 78L160 76" /><path d="M92 75L102 73M129 75L139 73" stroke="#fff" strokeOpacity=".25" strokeWidth="2" /></g>;
+    case "earrings": return <g className="studio-accessory"><circle cx="78" cy="98" r="5" fill="#d8aa52" stroke={INK} strokeWidth="2" /><circle cx="162" cy="98" r="5" fill="#d8aa52" stroke={INK} strokeWidth="2" /><circle cx="78" cy="98" r="1.5" fill="#fff1b7" /><circle cx="162" cy="98" r="1.5" fill="#fff1b7" /></g>;
+    case "headband": return <path className="studio-accessory" d="M83 57Q120 27 158 57" fill="none" stroke={clothes} strokeLinecap="round" strokeWidth="9" />;
+    case "necklace": return <g className="studio-accessory"><path d="M102 151Q120 176 138 151" fill="none" stroke="#d5ad55" strokeWidth="3" /><path d="M116 171L120 178L124 171Z" fill="#d5ad55" stroke={INK} strokeWidth="1.7" /></g>;
+    case "hair-clip": return <g className="studio-accessory"><path d="M149 57L161 49L166 62L153 65Z" fill="#efc768" stroke={INK} strokeLinejoin="round" strokeWidth="2.3" /><circle cx="158" cy="57" r="2" fill="#fff1af" /></g>;
     default: return null;
   }
 }
@@ -89,16 +96,5 @@ function Accessory({ config, clothes }: { config: AvatarConfig; clothes: string 
 export function StudioAvatar({ config, name, size = 260, className = "", state = "idle", active = false }: StudioAvatarProps) {
   const { skin, hair, clothes } = resolveCharacterColors(config);
   const expression = state === "sleepy" ? { ...config, expression: "sleepy" as const } : state === "focused" || state === "working" ? { ...config, expression: "focused" as const } : state === "celebrate" || state === "levelUp" || state === "welcome" ? { ...config, expression: "excited" as const } : config;
-  return <svg className={`studio-avatar character-avatar ${className}`} style={{ color: clothes }} width={size} height={size} viewBox="0 0 240 305" role="img" aria-label={`${name}'s character`} data-character={name} data-state={state} data-active={active}>
-    <ellipse cx="120" cy="297" rx="65" ry="8" fill="rgba(20,16,14,.18)" />
-    <g className="character-rig">
-      <HairBack config={config} color={hair} />
-      <Outfit config={config} skin={skin} clothes={clothes} />
-      <path d="M104 137V163Q120 174 136 163V137Z" fill={skin} stroke="#4a3028" strokeWidth="3" />
-      <Face config={expression} skin={skin} />
-      <HairFront config={config} color={hair} />
-      <Accessory config={config} clothes={clothes} />
-      <g className="character-state-mark" aria-hidden="true"><circle cx="181" cy="40" r="14" /><path d="M174 40L179 45L188 34" /></g>
-    </g>
-  </svg>;
+  return <svg className={`studio-avatar character-avatar ${className}`} style={{ color: clothes }} width={size} height={size} viewBox="0 0 240 305" role="img" aria-label={`${name}'s character`} data-character={name} data-state={state} data-active={active}><ellipse cx="120" cy="299" rx="66" ry="7" fill="rgba(20,16,14,.2)" /><g className="character-rig"><HairBack config={config} color={hair} /><Outfit config={config} skin={skin} clothes={clothes} /><path d="M104 129V154Q120 164 136 154V129Z" fill={skin} stroke={INK} strokeWidth="3.3" /><path d="M106 139Q120 147 134 139" fill="none" stroke={tone(skin, "#7b4034", 82)} strokeOpacity=".35" strokeWidth="2.2" /><Face config={expression} skin={skin} /><HairFront config={config} color={hair} /><Accessory config={config} clothes={clothes} /><g className="character-state-mark" aria-hidden="true"><circle cx="184" cy="43" r="14" /><path d="M177 43L182 48L191 36" /></g></g></svg>;
 }
