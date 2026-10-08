@@ -5,7 +5,7 @@ HomeQuest is a mobile-first cozy home-management RPG. Milestone 0.8 adds the Kit
 ## Run locally
 
 ```powershell
-npm install
+npm ci
 npm run dev
 ```
 
@@ -18,7 +18,10 @@ npm run lint
 npm run typecheck
 npm test
 npm run build
+npm run test:e2e
 ```
+
+GitHub Actions runs these checks on pushes and pull requests to `main`, including the Chromium desktop and mobile browser regressions. For local browser tests, first run `npx playwright install chromium`.
 
 ## Architecture
 

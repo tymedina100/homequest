@@ -5,6 +5,11 @@ import { schemaV4Fixture } from "../src/persistence/fixtures";
 import { serializeBackup } from "../src/domain/backup";
 import { addDays, toLocalDateKey } from "../src/domain/dates";
 
+// Keep persisted fixtures on their seeded date while browser timers continue normally.
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 7, 23, 10));
+});
+
 async function withSave(page: import("@playwright/test").Page, state: unknown) {
   await page.addInitScript(([key, value]) => { if (!localStorage.getItem(key)) localStorage.setItem(key, value); }, [STORAGE_KEY, JSON.stringify(state)]);
 }
@@ -98,7 +103,7 @@ test("Rachel Quick Complete isolates personal rewards while progressing the shar
 });
 
 test("Comeback remains a welcoming Quick Complete path after inactivity", async ({ page }) => {
-  const now = new Date(); const staleDate = addDays(toLocalDateKey(now), -4); const state = createSeedState(now);
+  const now = new Date(2026, 7, 23, 10); const staleDate = addDays(toLocalDateKey(now), -4); const state = createSeedState(now);
   state.household.questTemplates = state.household.questTemplates.filter((template) => template.id === "dishwasher");
   state.household.quests = state.household.quests.filter((quest) => quest.id === "dishwasher").map((quest) => ({ ...quest, occurrenceDate: staleDate }));
   state.household.lifecycle.lastLifecycleDate = staleDate; state.household.lifecycle.lastOpenedDate = staleDate;
