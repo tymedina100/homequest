@@ -44,7 +44,7 @@ describe("atomic completion transaction", () => {
     expect(result.state.players[TYLER_PLAYER_ID].progression).toEqual(before.players[TYLER_PLAYER_ID].progression);
   });
   it("supports Quick Complete through the full canonical transaction", () => {
-    const state = createSeedState(); const before = structuredClone(state);
+    const state = createSeedState(new Date("2026-08-23T10:00:00.000Z")); const before = structuredClone(state);
     state.players[TYLER_PLAYER_ID].dailyChest.qualifyingQuestIds = ["dinner"];
     const result = completeQuestTransaction(state, "dishwasher", TYLER_PLAYER_ID, "2026-08-23T10:00:00.000Z");
     expect(result.applied).toBe(true);
